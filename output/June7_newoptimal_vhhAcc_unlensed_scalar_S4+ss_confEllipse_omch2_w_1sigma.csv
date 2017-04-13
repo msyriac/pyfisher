@@ -1,0 +1,11 @@
+[confEllipse]
+sigmax2 = 2.64628819725e-07
+sigmay2 = 0.00363568756295
+sigmaxy = -8.29954204464e-06
+params = omch2,w
+confLevel = 1
+angle = 0.130803330216
+xcenter = 0.1197
+ycenter = -1.0
+width = 0.00150681413332
+height = 0.183302333009
