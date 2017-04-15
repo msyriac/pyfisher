@@ -33,7 +33,7 @@ Config.optionxform=str
 Config.read(iniFile)
 
 
-fskyList = np.arange(0.05,0.45,0.05)
+fskyList = np.append(np.array([0.0025]),np.arange(0.05,0.45,0.05))
 noiseList = 2.0*np.sqrt(fskyList/0.1)
 
 efficiencies = []
