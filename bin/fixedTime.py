@@ -119,7 +119,7 @@ for noiseNow,fskyNow in zip(noiseList,fskyList):
     spellmin,spellmax = listFromConfig(Config,'rForecast','pellrange')
     fnTT, fnEE = noiseFromConfig(Config,expName,TCMB=TCMB,beamsOverride=None,noisesOverride=[noiseNow],lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None,pellminOverride=spellmin,pellmaxOverride=spellmax)
 
-    fnBBSmall = cmb.noise_pad_infinity(fnEE,spellmin,spellmax)
+    fnBBSmall = lambda x: cmb.noise_pad_infinity(fnEE,spellmin,spellmax)(x)*TCMB**2.
 
     # differentiating between small and large telescope for future compatibility
     assert spellmin<=pellmin, "Why does your large telescope have a smaller lmin_P than the small one?"
