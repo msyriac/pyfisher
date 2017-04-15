@@ -9,6 +9,28 @@ from matplotlib.patches import Ellipse
 import matplotlib.pyplot as plt
 from scipy.linalg import block_diag
 
+def rSigma(fsky,ellBBRange,fnBB,dCls,lclbb,ClBB=lambda x: 0.):
+
+    # lclbb, ell=2 starts at 0
+    # dCls, ClBB, ell=2 starts at 2
+    
+
+    Fisher = 0.
+    for ell in ellBBRange:
+
+        dBBdr = dCls(ell)
+        deltaCl = ClBB(ell) + fnBB(ell) + lclbb(ell)
+
+                
+        if dBBdr==0.:
+            Frrell = 0.
+        else:    
+            Frrell = fsky*(2.*ell+1.)*(dBBdr**2.)/2./(deltaCl**2.)
+    
+        Fisher += Frrell
+
+    return np.sqrt(1./Fisher)
+
 
 def CovFromVecsSmall(Cls,ell,nTT=0.,nEE=0.,nkk=0.,lensing=False):
     '''
@@ -45,17 +67,13 @@ def calcFisher(paramList,ellrange,fidCls,dCls,fnTT,fnEE,fnKK,fsky,lensing=True,v
     Fisher = np.zeros((numParams,numParams))
     paramCombs = itertools.combinations_with_replacement(paramList,2)
     for param1,param2 in paramCombs:
-        #if verbose: print "Parameter combination : ", param1,param2
         i = paramList.index(param1)
         j = paramList.index(param2)
         Fell = 0.
         for ell in ellrange:
 
-
             nTT = fnTT(ell)
             nEE = fnEE(ell)
-            #nTT,nEE = self.Noises(ell,beamFWHMs,uKArcminTs,uKArcminPs,atmT,atmP)
-
 
             nkk = fnKK(ell)
             Cov = CovFromVecsSmall(fidCls,ell,nTT,nEE,nkk=nkk,lensing=lensing)
@@ -88,12 +106,16 @@ def loadFishers(filepaths):
 
     return totFisher
 
-def noiseFromConfig(Config,expName,TCMB=2.7255e6,beamsOverride=None,noisesOverride=None,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None):
+def noiseFromConfig(Config,expName,TCMB=2.7255e6,beamsOverride=None,noisesOverride=None,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None,tellminOverride=None,pellminOverride=None,tellmaxOverride=None,pellmaxOverride=None):
     import orphics.tools.cmb as cmb
     from orphics.tools.io import dictFromSection, listFromConfig
 
     tellmin,tellmax = listFromConfig(Config,expName,'tellrange')
+    if tellminOverride is not None: tellmin = tellminOverride
+    if tellmaxOverride is not None: tellmax = tellmaxOverride
     pellmin,pellmax = listFromConfig(Config,expName,'pellrange')
+    if pellminOverride is not None: pellmin = pellminOverride
+    if pellmaxOverride is not None: pellmax = pellmaxOverride
     if beamsOverride is not None:
         beams = beamsOverride
     else:
