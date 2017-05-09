@@ -33,7 +33,8 @@ Config.optionxform=str
 Config.read(iniFile)
 
 
-fskyList = np.append(np.array([0.0025]),np.arange(0.05,0.45,0.05))
+#fskyList = np.append(np.array([0.0025]),np.arange(0.05,0.45,0.05))
+fskyList = np.logspace(np.log10(0.001),np.log10(0.7),10)
 noiseList = 2.0*np.sqrt(fskyList/0.1)
 
 efficiencies = []
@@ -82,24 +83,24 @@ for noiseNow,fskyNow in zip(noiseList,fskyList):
     # Get fsky
     fsky = fskyNow #Config.getfloat(expName,'fsky')
     # Calculate the Fisher matrix and add to other Fishers
-    Fisher = otherFisher+calcFisher(paramList,ellrange,fidCls,dCls,fnTT,fnEE,fnKK,fsky,verbose=True)
+    # Fisher = otherFisher+calcFisher(paramList,ellrange,fidCls,dCls,fnTT,fnEE,fnKK,fsky,verbose=True)
 
-    # Get prior sigmas and add to Fisher
-    priorList = Config.get("fisher","priorList").split(',')
-    for prior,param in zip(priorList,paramList):
-        try:
-            priorSigma = float(prior)
-        except ValueError:
-            continue
-        ind = paramList.index(param)
-        Fisher[ind,ind] += 1./priorSigma**2.
+    # # Get prior sigmas and add to Fisher
+    # priorList = Config.get("fisher","priorList").split(',')
+    # for prior,param in zip(priorList,paramList):
+    #     try:
+    #         priorSigma = float(prior)
+    #     except ValueError:
+    #         continue
+    #     ind = paramList.index(param)
+    #     Fisher[ind,ind] += 1./priorSigma**2.
 
-    # get index of mnu and print marginalized constraint
-    indMnu = paramList.index('mnu')
-    mnu = np.sqrt(np.linalg.inv(Fisher)[indMnu,indMnu])*1000.
-    printC("Sum of neutrino masses 1-sigma: "+ str(mnu) + " meV",color="green",bold=True)
+    # # get index of mnu and print marginalized constraint
+    # indMnu = paramList.index('mnu')
+    # mnu = np.sqrt(np.linalg.inv(Fisher)[indMnu,indMnu])*1000.
+    # printC("Sum of neutrino masses 1-sigma: "+ str(mnu) + " meV",color="green",bold=True)
 
-    mnus.append(mnu)
+    # mnus.append(mnu)
     # CLKK S/N ============================================
 
     # Calculate Clkk S/N
@@ -166,16 +167,17 @@ pl = Plotter(labelX="$f_{\\mathrm{sky}}$",labelY="delensing %")
 pl.add(fskyList,efficiencies)
 pl.done(outDir + "efficiencies.png")
 
-pl = Plotter(labelX="$f_{\\mathrm{sky}}$",labelY="sig(mnu)")
-pl.add(fskyList,mnus)
-pl.done(outDir + "mnus.png")
+# pl = Plotter(labelX="$f_{\\mathrm{sky}}$",labelY="sig(mnu)")
+# pl.add(fskyList,mnus)
+# pl.done(outDir + "mnus.png")
 
 pl = Plotter(labelX="$f_{\\mathrm{sky}}$",labelY="Clkk S/N")
 pl.add(fskyList,sns)
 pl.done(outDir + "sns.png")
 
-pl = Plotter(labelX="$f_{\\mathrm{sky}}$",labelY="sig(r)")
-pl.add(fskyList,rs,ls="--",label="no delensing")
+pl = Plotter(labelX="$f_{\\mathrm{sky}}$",labelY="sig(r)",scaleX='log',scaleY='log')
+#pl.add(fskyList,rs,ls="--",label="no delensing")
 pl.add(fskyList,rdelens,label="with delensing")
+pl._ax.set_ylim(1.e-4,1.e-2)
 pl.legendOn(loc='upper right',labsize=12)
 pl.done(outDir + "rs.png")

@@ -5,7 +5,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 import argparse
 from pyfisher.lensInterface import lensNoise
-from pyfisher.clFisher import tryLoad, calcFisher, loadFishers, noiseFromConfig, rSigma
+from pyfisher.clFisher import tryLoad, calcFisher, loadFishers, noiseFromConfig, rSigma, testAgainstKSmith
 from orphics.tools.io import dictFromSection, listFromConfig, printC
 import orphics.tools.cmb as cmb
 from orphics.theory.gaussianCov import LensForecast
@@ -39,7 +39,7 @@ if skipLens:
     ls,Nls,ellbb,dlbb,efficiency = pickle.load(open("data/lastNls.pkl",'rb'))
 else:
     ls,Nls,ellbb,dlbb,efficiency = lensNoise(Config,expName,lensName,beamOverride=None,noiseTOverride=None,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None)
-
+    
     pickle.dump((ls,Nls,ellbb,dlbb,efficiency),open("data/lastNls.pkl",'wb'))
 
 printC("Delensing efficiency: "+ str(efficiency) + " %",color="green",bold=True)
@@ -73,22 +73,22 @@ fnKK = cmb.noise_pad_infinity(interp1d(ls,Nls,fill_value=np.inf,bounds_error=Fal
 ellrange = np.arange(min(tellmin,pellmin,kellmin),max(tellmax,pellmax,kellmax)).astype(int)
 # Get fsky
 fsky = Config.getfloat(expName,'fsky')
-# Calculate the Fisher matrix and add to other Fishers
-Fisher = otherFisher+calcFisher(paramList,ellrange,fidCls,dCls,fnTT,fnEE,fnKK,fsky,verbose=True)
+# # Calculate the Fisher matrix and add to other Fishers
+# Fisher = otherFisher+calcFisher(paramList,ellrange,fidCls,dCls,fnTT,fnEE,fnKK,fsky,verbose=True)
 
-# Get prior sigmas and add to Fisher
-priorList = Config.get("fisher","priorList").split(',')
-for prior,param in zip(priorList,paramList):
-    try:
-        priorSigma = float(prior)
-    except ValueError:
-        continue
-    ind = paramList.index(param)
-    Fisher[ind,ind] += 1./priorSigma**2.
+# # Get prior sigmas and add to Fisher
+# priorList = Config.get("fisher","priorList").split(',')
+# for prior,param in zip(priorList,paramList):
+#     try:
+#         priorSigma = float(prior)
+#     except ValueError:
+#         continue
+#     ind = paramList.index(param)
+#     Fisher[ind,ind] += 1./priorSigma**2.
 
-# get index of mnu and print marginalized constraint
-indMnu = paramList.index('mnu')
-printC("Sum of neutrino masses 1-sigma: "+ str(np.sqrt(np.linalg.inv(Fisher)[indMnu,indMnu])*1000.) + " meV",color="green",bold=True)
+# # get index of mnu and print marginalized constraint
+# indMnu = paramList.index('mnu')
+# printC("Sum of neutrino masses 1-sigma: "+ str(np.sqrt(np.linalg.inv(Fisher)[indMnu,indMnu])*1000.) + " meV",color="green",bold=True)
 
 
 # CLKK S/N ============================================

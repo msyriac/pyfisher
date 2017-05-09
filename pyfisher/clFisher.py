@@ -32,7 +32,7 @@ def rSigma(fsky,ellBBRange,fnBB,dCls,lclbb,ClBB=lambda x: 0.):
     return np.sqrt(1./Fisher)
 
 
-def CovFromVecsSmall(Cls,ell,nTT=0.,nEE=0.,nkk=0.,lensing=False):
+def CovFromVecs(Cls,ell,nTT=0.,nEE=0.,nkk=0.,lensing=False):
     '''
     For calculating Fisher through Eq.4 of 1402.4108 ("compact" option)
     Pros: easily extendable to optical cross-correlations
@@ -76,9 +76,9 @@ def calcFisher(paramList,ellrange,fidCls,dCls,fnTT,fnEE,fnKK,fsky,lensing=True,v
             nEE = fnEE(ell)
 
             nkk = fnKK(ell)
-            Cov = CovFromVecsSmall(fidCls,ell,nTT,nEE,nkk=nkk,lensing=lensing)
-            dCov1 = CovFromVecsSmall(dCls[param1],ell,lensing=lensing)
-            dCov2 = CovFromVecsSmall(dCls[param2],ell,lensing=lensing)
+            Cov = CovFromVecs(fidCls,ell,nTT,nEE,nkk=nkk,lensing=lensing)
+            dCov1 = CovFromVecs(dCls[param1],ell,lensing=lensing)
+            dCov2 = CovFromVecs(dCls[param2],ell,lensing=lensing)
             InvCov = np.linalg.inv(Cov)
             Fell += (2.*ell+1.) * fsky * np.trace(np.dot(np.dot(InvCov,dCov1),np.dot(InvCov,dCov2))) /2.
 
@@ -88,6 +88,37 @@ def calcFisher(paramList,ellrange,fidCls,dCls,fnTT,fnEE,fnKK,fsky,lensing=True,v
 
 
     return Fisher
+
+
+def calcBvec(paramList,ellrange,sigCls,fidCls,dCls,fnTT,fnEE,fnKK,fsky,lensing=True,verbose=True):
+    numParams = len(paramList)
+    
+    Cls = []
+    nCls = []
+    # Loop through each unique parameter combination
+    Bvec = np.zeros((numParams,1))
+    for param in paramList:
+        i = paramList.index(param )
+        B= 0.
+        for ell in ellrange:
+
+            nTT = fnTT(ell)
+            nEE = fnEE(ell)
+
+            nkk = fnKK(ell)
+            Cov = CovFromVecs(fidCls,ell,nTT,nEE,nkk=nkk,lensing=lensing)
+            dCov1 = CovFromVecs(sigCls,ell,lensing=lensing)
+            dCov2 = CovFromVecs(dCls[param],ell,lensing=lensing)
+            InvCov = np.linalg.inv(Cov)
+            B += (2.*ell+1.) * fsky * np.trace(np.dot(np.dot(InvCov,dCov1),np.dot(InvCov,dCov2))) /2.
+
+
+        Bvec[i] = B
+    return Bvec
+
+def calcBias(Fisher,Bvec):
+    Finv = np.linalg.inv(Fisher)
+    return np.dot(Finv,Bvec)
 
 
 def tryLoad(filepath,delimiter=None):
@@ -141,3 +172,23 @@ def noiseFromConfig(Config,expName,TCMB=2.7255e6,beamsOverride=None,noisesOverri
     fnEE = interp1d(np.arange(pellmin,pellmax),1./invnEEs,bounds_error=False,fill_value=np.inf)
     
     return fnTT, fnEE
+
+def testAgainstKSmith(pmax,beamFWHMArcmin,dCls,lclbb,rExp,rInFid,fCls,fsky):
+    from orphics.tools.io import Plotter
+    pl = Plotter(scaleX='log',scaleY='log')
+    pnoiserange = np.logspace(np.log10(0.5),np.log10(50.),num=100)
+    for pmin in [2,5,10,40]:
+        sigs = []
+        for deltaP in pnoiserange:
+            ellBBRange = range(pmin,pmax)
+
+            sigs.append(rSigma(fsky,ellBBRange,beamFWHMArcmin,deltaP,dCls[:,2],lclbb,rExp*fCls[:,2]/rInFid))
+
+        kn, kr = np.loadtxt("data/k"+str(pmin)+".csv",delimiter=',',unpack=True)
+        pl.add(kn,kr,ls='--')
+        pl.add(pnoiserange,sigs,label="$\\ell_{\mathrm{min}}="+str(pmin)+"$")
+
+    pl.legendOn()
+    pl._ax.set_xlim(0.5,50.)
+    pl._ax.set_ylim(1.e-5,1.e-1)
+    pl.done("kenplot.png")    
