@@ -44,10 +44,18 @@ rs = []
 rdelens = []
 
 for noiseNow,fskyNow in zip(noiseList,fskyList):
+    # if True:
+
+    # fskyNow = 0.5
+    # noiseNow = 0.5
+    
     # Get lensing noise curve. If you want to override something from the Config file in order to make plots varying it,
     # change from None to the value you want.
 
     ls,Nls,ellbb,dlbb,efficiency = lensNoise(Config,expName,lensName,beamOverride=None,noiseTOverride=noiseNow,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None)
+
+
+    
 
     efficiencies.append(efficiency)
     
@@ -112,6 +120,13 @@ for noiseNow,fskyNow in zip(noiseList,fskyList):
     sn,errs = LF.sn(snrange,fsky,"kk")
     printC("Lensing autopower S/N: "+ str(sn),color="green",bold=True)
 
+    # pl = Plotter(scaleY='log',scaleX='log')
+    # pl.add(frange,Clkk)
+    # pl.add(ls,Nls)
+    # pl._ax.set_ylim(-max(Clkk),max(Clkk))
+    # pl.done("clkk.png")
+
+
 
     sns.append(sn)
     
@@ -142,20 +157,31 @@ for noiseNow,fskyNow in zip(noiseList,fskyList):
     ellBBRange = np.arange(spellmin,spellmax)
 
     fclbb = cmb.noise_pad_infinity(interp1d(ellBBRange,theory.lCl('BB',ellBBRange)*TCMB**2.,fill_value=np.inf,bounds_error=False),spellmin,spellmax)
+
+
+    # clbbnow = theory.lCl('BB',ellBBRange)#*TCMB**2.
+
+    # pl = Plotter(scaleY='log',scaleX='log')
+    # pl.add(ellBBRange,clbbnow*ellBBRange**2.)
+    # pl.add(ellbb,dlbb*ellbb**2.)
+    # # pl._ax.set_ylim(-max(Clkk),max(Clkk))
+    # pl.done("clbb.png")
+
+    
     fflbb = interp1d(range(len(fCls[:,2])),rExp*fCls[:,2]/rInFid,bounds_error=False,fill_value=np.inf)
     fdCls = interp1d(range(len(dCls[:,2])),dCls[:,2],bounds_error=False,fill_value=np.inf)
 
 
     fclbbTot = lambda x: fclbb(x)*(1.+fgPer/100.)
     r0 = rSigma(fsky,ellBBRange,fnBBSmall,fdCls,fclbbTot,fflbb)
-    printC("sigma(r) without delensing: "+ str(r0),color="green",bold=True)
+    printC("sigma(r) without delensing: "+ str(r0*1e4)+"e-4",color="green",bold=True)
     rs.append(r0)
     fdlbb = cmb.noise_pad_infinity(interp1d(ellbb,dlbb*TCMB**2.,fill_value=np.inf,bounds_error=False),spellmin,spellmax)
 
     fclbbTot = lambda x: fdlbb(x)+fclbb(x)*fgPer/100.
 
     r = rSigma(fsky,ellBBRange,fnBBSmall,fdCls,fclbbTot,fflbb)
-    printC("sigma(r) with delensing: "+ str(r),color="green",bold=True)
+    printC("sigma(r) with delensing: "+ str(r*1e4)+"e-4",color="green",bold=True)
     rdelens.append(r)
 
 
@@ -176,7 +202,7 @@ pl.add(fskyList,sns)
 pl.done(outDir + "sns.png")
 
 pl = Plotter(labelX="$f_{\\mathrm{sky}}$",labelY="sig(r)",scaleX='log',scaleY='log')
-#pl.add(fskyList,rs,ls="--",label="no delensing")
+pl.add(fskyList,rs,ls="--",label="no delensing")
 pl.add(fskyList,rdelens,label="with delensing")
 pl._ax.set_ylim(1.e-4,1.e-2)
 pl.legendOn(loc='upper right',labsize=12)
