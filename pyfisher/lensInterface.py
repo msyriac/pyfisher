@@ -26,7 +26,7 @@ def lensNoise(Config,expName,lensName,beamOverride=None,noiseTOverride=None,lkne
     assert beamFind.size==1
     assert noiseFind.size==1
     if beamOverride is not None:
-        beamX = beamY = beam
+        beamX = beamY = beamOverride
     else:
         beamX = beamY = beamFind[0]
     if noiseTOverride is not None:
