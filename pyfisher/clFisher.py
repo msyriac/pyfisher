@@ -75,7 +75,10 @@ def calcFisher(paramList,ellrange,fidCls,dCls,fnTT,fnEE,fnKK,fsky,lensing=True,v
             nTT = fnTT(ell)
             nEE = fnEE(ell)
 
-            nkk = fnKK(ell)
+            if lensing:
+                nkk = fnKK(ell)
+            else:
+                nkk = 0.
             Cov = CovFromVecs(fidCls,ell,nTT,nEE,nkk=nkk,lensing=lensing)
             dCov1 = CovFromVecs(dCls[param1],ell,lensing=lensing)
             dCov2 = CovFromVecs(dCls[param2],ell,lensing=lensing)
