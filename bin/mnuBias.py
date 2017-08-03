@@ -67,7 +67,7 @@ for paramName in paramList:
 otherFisher = loadFishers(Config.get('fisher','otherFishers').split(','))
 
 # Get CMB noise functions and ell ranges. Note that the same overriding is possible but here the beams and noises have to be lists for the different frequencies.
-fnTT, fnEE = noiseFromConfig(Config,expName,TCMB=TCMB,beamsOverride=None,noisesOverride=None,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None)
+fnTT, fnEE = noiseFromConfig(Config,expName,TCMB=1.,beamsOverride=None,noisesOverride=None,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None)
 tellmin,tellmax = listFromConfig(Config,expName,'tellrange')
 pellmin,pellmax = listFromConfig(Config,expName,'pellrange')
 
