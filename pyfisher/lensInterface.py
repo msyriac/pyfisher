@@ -57,5 +57,5 @@ def lensNoise(Config,expName,lensName,beamOverride=None,noiseTOverride=None,lkne
     lsmv,Nlmv,ells,dclbb,efficiency = myNls.getNlIterative(pols,kellmin,kellmax,tellmax,pellmin,pellmax,dell=dell,halo=True,plot=plot)
 
      
-    return lsmv,Nlmv,ells,dclbb,efficiency
+    return lsmv,Nlmv,ells,dclbb,efficiency,cc
 
