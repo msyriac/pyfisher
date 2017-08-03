@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.interpolate import interp1d
 
-def lensNoise(Config,expName,lensName,beamOverride=None,noiseTOverride=None,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None,tellminOverride=None,pellminOverride=None,tellmaxOverride=None,pellmaxOverride=None):
+def lensNoise(Config,expName,lensName,beamOverride=None,noiseTOverride=None,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None,tellminOverride=None,pellminOverride=None,tellmaxOverride=None,pellmaxOverride=None,px=1.0,gradCut=10000,bigell=9000,plot=False):
 
     from orphics.tools.io import dictFromSection, listFromConfig
 
@@ -41,9 +41,9 @@ def lensNoise(Config,expName,lensName,beamOverride=None,noiseTOverride=None,lkne
     import flipper.liteMap as lm
     from alhazen.quadraticEstimator import NlGenerator,getMax
     deg = 5.
-    px = 1.0
+    #px = 1.0
     dell = 10
-    gradCut = 10000
+    #gradCut = 10000
     kellmin = 10
     lmap = lm.makeEmptyCEATemplate(raSizeDeg=deg, decSizeDeg=deg,pixScaleXarcmin=px,pixScaleYarcmin=px)
     kellmax = max(tellmax,pellmax)
@@ -51,11 +51,11 @@ def lensNoise(Config,expName,lensName,beamOverride=None,noiseTOverride=None,lkne
     cc = Cosmology(lmax=int(kellmax),pickling=True)
     theory = cc.theory
     bin_edges = np.arange(kellmin,kellmax,dell)
-    myNls = NlGenerator(lmap,theory,bin_edges,gradCut=gradCut)
+    myNls = NlGenerator(lmap,theory,bin_edges,gradCut=gradCut,bigell=bigell)
     myNls.updateNoise(beamX,noiseTX,np.sqrt(2.)*noiseTX,tellmin,tellmax,pellmin,pellmax,beamY=beamY,noiseTY=noiseTY,noisePY=np.sqrt(2.)*noiseTY,lkneesX=(lkneeT,lkneeP),lkneesY=(lkneeT,lkneeP),alphasX=(alphaT,alphaP),alphasY=(alphaT,alphaP))
 
-    lsmv,Nlmv,ells,dclbb,efficiency = myNls.getNlIterative(pols,kellmin,kellmax,tellmax,pellmin,pellmax,dell=dell,halo=True)
+    lsmv,Nlmv,ells,dclbb,efficiency = myNls.getNlIterative(pols,kellmin,kellmax,tellmax,pellmin,pellmax,dell=dell,halo=True,plot=plot)
 
      
-    return lsmv,Nlmv,ells,dclbb,efficiency
+    return lsmv,Nlmv,ells,dclbb,efficiency,cc
 
