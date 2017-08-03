@@ -32,9 +32,9 @@ Config = SafeConfigParser()
 Config.optionxform=str
 Config.read(iniFile)
 
-
+fskyList = np.array([0.4])
 #fskyList = np.append(np.array([0.0025]),np.arange(0.05,0.45,0.05))
-fskyList = np.logspace(np.log10(0.001),np.log10(0.7),10)
+#fskyList = np.logspace(np.log10(0.001),np.log10(0.7),10)
 noiseList = 2.0*np.sqrt(fskyList/0.1)
 
 efficiencies = []
@@ -52,7 +52,7 @@ for noiseNow,fskyNow in zip(noiseList,fskyList):
     # Get lensing noise curve. If you want to override something from the Config file in order to make plots varying it,
     # change from None to the value you want.
 
-    ls,Nls,ellbb,dlbb,efficiency = lensNoise(Config,expName,lensName,beamOverride=None,noiseTOverride=noiseNow,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None)
+    ls,Nls,ellbb,dlbb,efficiency,cc = lensNoise(Config,expName,lensName,beamOverride=None,noiseTOverride=noiseNow,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None)
 
 
     
@@ -75,10 +75,14 @@ for noiseNow,fskyNow in zip(noiseList,fskyList):
 
 
     # Load other Fisher matrices to add
-    otherFisher = loadFishers(Config.get('fisher','otherFishers').split(','))
+    try:
+        otherFisher = loadFishers(Config.get('fisher','otherFishers').split(','))
+    except:
+        otherFisher = 0.
 
     # Get CMB noise functions and ell ranges. Note that the same overriding is possible but here the beams and noises have to be lists for the different frequencies.
     fnTT, fnEE = noiseFromConfig(Config,expName,TCMB=TCMB,beamsOverride=None,noisesOverride=[noiseNow],lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None)
+
     tellmin,tellmax = listFromConfig(Config,expName,'tellrange')
     pellmin,pellmax = listFromConfig(Config,expName,'pellrange')
 
@@ -91,24 +95,24 @@ for noiseNow,fskyNow in zip(noiseList,fskyList):
     # Get fsky
     fsky = fskyNow #Config.getfloat(expName,'fsky')
     # Calculate the Fisher matrix and add to other Fishers
-    # Fisher = otherFisher+calcFisher(paramList,ellrange,fidCls,dCls,fnTT,fnEE,fnKK,fsky,verbose=True)
+    Fisher = otherFisher+calcFisher(paramList,ellrange,fidCls,dCls,lambda x: fnTT(x)*TCMB**2.,lambda x: fnEE(x)*TCMB**2.,fnKK,fsky,verbose=True)
 
-    # # Get prior sigmas and add to Fisher
-    # priorList = Config.get("fisher","priorList").split(',')
-    # for prior,param in zip(priorList,paramList):
-    #     try:
-    #         priorSigma = float(prior)
-    #     except ValueError:
-    #         continue
-    #     ind = paramList.index(param)
-    #     Fisher[ind,ind] += 1./priorSigma**2.
+    # Get prior sigmas and add to Fisher
+    priorList = Config.get("fisher","priorList").split(',')
+    for prior,param in zip(priorList,paramList):
+        try:
+            priorSigma = float(prior)
+        except ValueError:
+            continue
+        ind = paramList.index(param)
+        Fisher[ind,ind] += 1./priorSigma**2.
 
-    # # get index of mnu and print marginalized constraint
-    # indMnu = paramList.index('mnu')
-    # mnu = np.sqrt(np.linalg.inv(Fisher)[indMnu,indMnu])*1000.
-    # printC("Sum of neutrino masses 1-sigma: "+ str(mnu) + " meV",color="green",bold=True)
+    # get index of mnu and print marginalized constraint
+    indMnu = paramList.index('mnu')
+    mnu = np.sqrt(np.linalg.inv(Fisher)[indMnu,indMnu])*1000.
+    printC("Sum of neutrino masses 1-sigma: "+ str(mnu) + " meV",color="green",bold=True)
 
-    # mnus.append(mnu)
+    mnus.append(mnu)
     # CLKK S/N ============================================
 
     # Calculate Clkk S/N
@@ -171,6 +175,17 @@ for noiseNow,fskyNow in zip(noiseList,fskyList):
     fflbb = interp1d(range(len(fCls[:,2])),rExp*fCls[:,2]/rInFid,bounds_error=False,fill_value=np.inf)
     fdCls = interp1d(range(len(dCls[:,2])),dCls[:,2],bounds_error=False,fill_value=np.inf)
 
+    from orphics.tools.io import Plotter
+    ells = np.arange(0,len(fidCls[:,0]),1)
+    clee = fidCls[:,1]
+    clbb = fidCls[:,2]
+    nlbbsmall = fnBBSmall(ells)
+    pl = Plotter(scaleY='log')
+    pl.add(ells,clee*ells*(ells+1.)/2./np.pi)
+    pl.add(ells,clbb*ells*(ells+1.)/2./np.pi)
+    pl.add(ells,nlbbsmall*ells*(ells+1.)/2./np.pi)
+    pl.done("cls.png")
+    
 
     fclbbTot = lambda x: fclbb(x)*(1.+fgPer/100.)
     r0 = rSigma(fsky,ellBBRange,fnBBSmall,fdCls,fclbbTot,fflbb)

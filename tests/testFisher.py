@@ -68,6 +68,16 @@ except:
 
 # Get CMB noise functions and ell ranges. Note that the same overriding is possible but here the beams and noises have to be lists for the different frequencies.
 fnTT, fnEE = noiseFromConfig(Config,expName,TCMB=TCMB,beamsOverride=None,noisesOverride=None,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None)
+from orphics.tools.io import Plotter
+ells = np.arange(0,len(fidCls[:,0]),1)
+cltt = fidCls[:,0]
+nltt = fnTT(ells)
+pl = Plotter(scaleY='log')
+pl.add(ells,cltt*ells*(ells+1.)/2./np.pi)
+pl.add(ells,nltt*ells*(ells+1.)/2./np.pi)
+pl.done("cls.png")
+
+print (fnTT(2000))
 tellmin,tellmax = listFromConfig(Config,expName,'tellrange')
 pellmin,pellmax = listFromConfig(Config,expName,'pellrange')
 
@@ -85,7 +95,7 @@ ellrange = np.arange(min(tellmin,pellmin,kellmin),max(tellmax,pellmax,kellmax)).
 fsky = Config.getfloat(expName,'fsky')
 # Calculate the Fisher matrix and add to other Fishers
 if noLens:   
-    Fisher = otherFisher+calcFisher(paramList,ellrange,fidCls,dCls,fnTT,fnEE,None,fsky,lensing=False,verbose=True)
+    Fisher = otherFisher+calcFisher(paramList,ellrange,fidCls,dCls,lambda x: fnTT(x)*TCMB**2.,lambda x: fnEE(x)*TCMB**2.,None,fsky,lensing=False,verbose=True)
 else:
     Fisher = otherFisher+calcFisher(paramList,ellrange,fidCls,dCls,fnTT,fnEE,fnKK,fsky,lensing=True,verbose=True)
 
