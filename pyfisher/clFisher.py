@@ -9,10 +9,10 @@ from matplotlib.patches import Ellipse
 import matplotlib.pyplot as plt
 from scipy.linalg import block_diag
 from pyfisher.lensInterface import lensNoise
+import orphics.tools.cmb as cmb
+from orphics.tools.io import dictFromSection, listFromConfig
 
 
-def fisher_from_szar_config(Config,expName,fishName,TCMB=2.7255e6,beamsOverride=None,noisesOverride=None,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None,tellminOverride=None,pellminOverride=None,tellmaxOverride=None,pellmaxOverride=None):
-    pass
 
 
 def fisher_from_config(fidCls,dCls,paramList,Config,expName,lensName=None,TCMB=2.7255e6,beamsOverride=None,noisesOverride=None,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None,tellminOverride=None,pellminOverride=None,tellmaxOverride=None,pellmaxOverride=None):
@@ -27,7 +27,7 @@ def fisher_from_config(fidCls,dCls,paramList,Config,expName,lensName=None,TCMB=2
 
     if lensName is not None:
         doLens = True
-        ls,Nls,ellbb,dlbb,efficiency,cc = lensNoise(Config,expName,lensName,beamOverride,noiseTOverride,lkneeTOverride,lkneePOverride,alphaTOverride,alphaPOverride)
+        ls,Nls,ellbb,dlbb,efficiency,cc = lensNoise(Config,expName,lensName,beamsOverride,noisesOverride,lkneeTOverride,lkneePOverride,alphaTOverride,alphaPOverride)
 
     
         # Pad CMB lensing noise with infinity outside L ranges
@@ -180,8 +180,6 @@ def loadFishers(filepaths):
     return totFisher
 
 def noiseFromConfig(Config,expName,TCMB=2.7255e6,beamsOverride=None,noisesOverride=None,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None,tellminOverride=None,pellminOverride=None,tellmaxOverride=None,pellmaxOverride=None):
-    import orphics.tools.cmb as cmb
-    from orphics.tools.io import dictFromSection, listFromConfig
 
     tellmin,tellmax = listFromConfig(Config,expName,'tellrange')
     if tellminOverride is not None: tellmin = tellminOverride
