@@ -1,20 +1,25 @@
 import numpy as np
 from scipy.interpolate import interp1d
+import sys
 
 
-def lensNoise(Config,expName,lensName,beamOverride=None,noiseTOverride=None,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None,tellminOverride=None,pellminOverride=None,tellmaxOverride=None,pellmaxOverride=None,px=1.0,gradCut=10000,bigell=9000,plot=False):
+def lensNoise(Config,expName,lensName,beamOverride=None,noiseTOverride=None,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None,tellminOverride=None,pellminOverride=None,tellmaxOverride=None,pellmaxOverride=None,px=1.0,gradCut=10000,bigell=9000,plot=False,noiseFuncT=None,noiseFuncP=None):
 
-    from orphics.tools.io import dictFromSection, listFromConfig
+    from orphics.io import list_from_config
 
-    beam = listFromConfig(Config,expName,'beams')
-    noise = listFromConfig(Config,expName,'noises')
-    freq = listFromConfig(Config,expName,'freqs')
-    lkneeT,lkneeP = listFromConfig(Config,expName,'lknee')
-    alphaT,alphaP = listFromConfig(Config,expName,'alpha')
-    tellmin,tellmax = listFromConfig(Config,expName,'tellrange')
+    beam = list_from_config(Config,expName,'beams')
+    noise = list_from_config(Config,expName,'noises')
+    freq = list_from_config(Config,expName,'freqs')
+    lkneeT,lkneeP = list_from_config(Config,expName,'lknee')
+    alphaT,alphaP = list_from_config(Config,expName,'alpha')
+    if (noiseFuncT is None) and (noiseFuncP is None):
+        print 'Not using noise files for generating lensing noise'
+    else:
+        print 'Using noise files for generating lensing noise'
+    tellmin,tellmax = list_from_config(Config,expName,'tellrange')
     if tellminOverride is not None: tellmin = tellminOverride
     if tellmaxOverride is not None: tellmax = tellmaxOverride
-    pellmin,pellmax = listFromConfig(Config,expName,'pellrange')
+    pellmin,pellmax = list_from_config(Config,expName,'pellrange')
     if pellminOverride is not None: pellmin = pellminOverride
     if pellmaxOverride is not None: pellmax = pellmaxOverride
     lmax = int(Config.getfloat(expName,'lmax'))
@@ -40,20 +45,18 @@ def lensNoise(Config,expName,lensName,beamOverride=None,noiseTOverride=None,lkne
     if alphaPOverride is not None: alphaP = alphaPOverride
 
     import flipper.liteMap as lm
-    from alhazen.quadraticEstimator import NlGenerator,getMax
+    from orphics.lensing import NlGenerator,getMax
     deg = 5.
-    #px = 1.0
     dell = 10
-    #gradCut = 10000
     kellmin = 10
     lmap = lm.makeEmptyCEATemplate(raSizeDeg=deg, decSizeDeg=deg,pixScaleXarcmin=px,pixScaleYarcmin=px)
     kellmax = max(tellmax,pellmax)
-    from orphics.theory.cosmology import Cosmology
+    from orphics.cosmology import Cosmology
     cc = Cosmology(lmax=int(kellmax),pickling=True)
     theory = cc.theory
     bin_edges = np.arange(kellmin,kellmax,dell)
     myNls = NlGenerator(lmap,theory,bin_edges,gradCut=gradCut,bigell=bigell)
-    myNls.updateNoise(beamX,noiseTX,np.sqrt(2.)*noiseTX,tellmin,tellmax,pellmin,pellmax,beamY=beamY,noiseTY=noiseTY,noisePY=np.sqrt(2.)*noiseTY,lkneesX=(lkneeT,lkneeP),lkneesY=(lkneeT,lkneeP),alphasX=(alphaT,alphaP),alphasY=(alphaT,alphaP))
+    myNls.updateNoise(beamX,noiseTX,np.sqrt(2.)*noiseTX,tellmin,tellmax,pellmin,pellmax,beamY=beamY,noiseTY=noiseTY,noisePY=np.sqrt(2.)*noiseTY,lkneesX=(lkneeT,lkneeP),lkneesY=(lkneeT,lkneeP),alphasX=(alphaT,alphaP),alphasY=(alphaT,alphaP),noiseFuncTX=noiseFuncT,noiseFuncTY=noiseFuncT,noiseFuncPX=noiseFuncP,noiseFuncPY=noiseFuncP)
 
     lsmv,Nlmv,ells,dclbb,efficiency = myNls.getNlIterative(pols,kellmin,kellmax,tellmax,pellmin,pellmax,dell=dell,halo=True,plot=plot)
 
