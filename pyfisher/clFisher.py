@@ -122,6 +122,8 @@ def calcFisher(paramList,ellrange,fidCls,dCls,fnTT,fnEE,fnKK,fsky,lensing=True,v
             dCov1 = CovFromVecs(dCls[param1],ell,lensing=lensing)
             dCov2 = CovFromVecs(dCls[param2],ell,lensing=lensing)
             InvCov = np.linalg.inv(Cov)
+            #InvCov = 1./Cov
+            #Fell += (2.*ell+1.) * fsky * InvCov*dCov1*InvCov*dCov2 /2.
             Fell += (2.*ell+1.) * fsky * np.trace(np.dot(np.dot(InvCov,dCov1),np.dot(InvCov,dCov2))) /2.
 
 
