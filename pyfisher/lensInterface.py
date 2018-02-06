@@ -3,17 +3,17 @@ from scipy.interpolate import interp1d
 
 def lensNoise(Config,expName,lensName,beamOverride=None,noiseTOverride=None,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None,tellminOverride=None,pellminOverride=None,tellmaxOverride=None,pellmaxOverride=None,deg=5.,px=1.0,gradCut=10000,bigell=9000,plot=False,theoryOverride=None,lensedEqualsUnlensed=False):
 
-    from orphics.tools.io import dictFromSection, listFromConfig
+    from orphics.io import dict_from_section, list_from_config
 
-    beam = listFromConfig(Config,expName,'beams')
-    noise = listFromConfig(Config,expName,'noises')
-    freq = listFromConfig(Config,expName,'freqs')
-    lkneeT,lkneeP = listFromConfig(Config,expName,'lknee')
-    alphaT,alphaP = listFromConfig(Config,expName,'alpha')
-    tellmin,tellmax = listFromConfig(Config,expName,'tellrange')
+    beam = list_from_config(Config,expName,'beams')
+    noise = list_from_config(Config,expName,'noises')
+    freq = list_from_config(Config,expName,'freqs')
+    lkneeT,lkneeP = list_from_config(Config,expName,'lknee')
+    alphaT,alphaP = list_from_config(Config,expName,'alpha')
+    tellmin,tellmax = list_from_config(Config,expName,'tellrange')
     if tellminOverride is not None: tellmin = tellminOverride
     if tellmaxOverride is not None: tellmax = tellmaxOverride
-    pellmin,pellmax = listFromConfig(Config,expName,'pellrange')
+    pellmin,pellmax = list_from_config(Config,expName,'pellrange')
     if pellminOverride is not None: pellmin = pellminOverride
     if pellmaxOverride is not None: pellmax = pellmaxOverride
     lmax = int(Config.getfloat(expName,'lmax'))
@@ -38,24 +38,27 @@ def lensNoise(Config,expName,lensName,beamOverride=None,noiseTOverride=None,lkne
     if alphaTOverride is not None: alphaT = alphaTOverride
     if alphaPOverride is not None: alphaP = alphaPOverride
 
-    import flipper.liteMap as lm
-    from alhazen.quadraticEstimator import NlGenerator,getMax
+    from orphics.lensing import NlGenerator,getMax
+    from orphics import maps
     #deg = 5.
     #px = 1.0
     dell = 10
     #gradCut = 10000
     kellmin = 10
     lmap = lm.makeEmptyCEATemplate(raSizeDeg=deg, decSizeDeg=deg,pixScaleXarcmin=px,pixScaleYarcmin=px)
+    shape,wcs = maps.rect_geometry(width_deg = deg, px_res_arcmin=px)
+
+    
     kellmax = max(tellmax,pellmax)
     if theoryOverride is None:
-        from orphics.theory.cosmology import Cosmology
+        from orphics.cosmology import Cosmology
         cc = Cosmology(lmax=int(kellmax),pickling=True)
         theory = cc.theory
     else:
         theory = theoryOverride
         cc = None
     bin_edges = np.arange(kellmin,kellmax,dell)
-    myNls = NlGenerator(lmap,theory,bin_edges,gradCut=gradCut,bigell=bigell,lensedEqualsUnlensed=lensedEqualsUnlensed)
+    myNls = NlGenerator(shape,wcs,theory,bin_edges,gradCut=gradCut,bigell=bigell,lensedEqualsUnlensed=lensedEqualsUnlensed)
     myNls.updateNoise(beamX,noiseTX,np.sqrt(2.)*noiseTX,tellmin,tellmax,pellmin,pellmax,beamY=beamY,noiseTY=noiseTY,noisePY=np.sqrt(2.)*noiseTY,lkneesX=(lkneeT,lkneeP),lkneesY=(lkneeT,lkneeP),alphasX=(alphaT,alphaP),alphasY=(alphaT,alphaP))
 
     lsmv,Nlmv,ells,dclbb,efficiency = myNls.getNlIterative(pols,kellmin,kellmax,tellmax,pellmin,pellmax,dell=dell,halo=True,plot=plot)

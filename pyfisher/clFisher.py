@@ -8,6 +8,45 @@ import traceback
 from matplotlib.patches import Ellipse
 import matplotlib.pyplot as plt
 from scipy.linalg import block_diag
+from pyfisher.lensInterface import lensNoise
+import orphics.tools.cmb as cmb
+from orphics.tools.io import dictFromSection, listFromConfig
+
+
+
+
+def fisher_from_config(fidCls,dCls,paramList,Config,expName,lensName=None,TCMB=2.7255e6,beamsOverride=None,noisesOverride=None,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None,tellminOverride=None,pellminOverride=None,tellmaxOverride=None,pellmaxOverride=None):
+    fnTT, fnEE = noiseFromConfig(Config,expName,TCMB,beamsOverride,noisesOverride,lkneeTOverride,lkneePOverride,alphaTOverride,alphaPOverride,tellminOverride,pellminOverride,tellmaxOverride,pellmaxOverride)
+
+    tellmin,tellmax = listFromConfig(Config,expName,'tellrange')
+    pellmin,pellmax = listFromConfig(Config,expName,'pellrange')
+    if tellminOverride is not None: tellmin = tellminOverride
+    if tellmaxOverride is not None: tellmax = tellmaxOverride
+    if pellminOverride is not None: pellmin = pellminOverride
+    if pellmaxOverride is not None: pellmax = pellmaxOverride
+
+    if lensName is not None:
+        doLens = True
+        ls,Nls,ellbb,dlbb,efficiency,cc = lensNoise(Config,expName,lensName,beamsOverride,noisesOverride,lkneeTOverride,lkneePOverride,alphaTOverride,alphaPOverride)
+
+    
+        # Pad CMB lensing noise with infinity outside L ranges
+        kellmin,kellmax = listFromConfig(Config,lensName,'Lrange')
+        fnKK = cmb.noise_pad_infinity(interp1d(ls,Nls,fill_value=np.inf,bounds_error=False),kellmin,kellmax)
+    else:
+        doLens = False
+        fnKK = lambda x: np.nan
+        kellmin = np.inf
+        kellmax = -np.inf
+        
+    # Decide on what ell range to calculate the Fisher matrix
+    ellrange = np.arange(min(tellmin,pellmin,kellmin),max(tellmax,pellmax,kellmax)).astype(int)
+    # Get fsky
+    fsky = Config.getfloat(expName,'fsky')
+    # Calculate the Fisher matrix and add to other Fishers
+    Fisher = calcFisher(paramList,ellrange,fidCls,dCls,lambda x: fnTT(x)*TCMB**2.,lambda x: fnEE(x)*TCMB**2.,fnKK,fsky,lensing=doLens,verbose=True)
+
+    return Fisher
 
 def rSigma(fsky,ellBBRange,fnBB,dCls,lclbb,ClBB=lambda x: 0.):
 
@@ -143,8 +182,6 @@ def loadFishers(filepaths):
     return totFisher
 
 def noiseFromConfig(Config,expName,TCMB=2.7255e6,beamsOverride=None,noisesOverride=None,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None,tellminOverride=None,pellminOverride=None,tellmaxOverride=None,pellmaxOverride=None):
-    import orphics.tools.cmb as cmb
-    from orphics.tools.io import dictFromSection, listFromConfig
 
     tellmin,tellmax = listFromConfig(Config,expName,'tellrange')
     if tellminOverride is not None: tellmin = tellminOverride
