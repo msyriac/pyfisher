@@ -9,8 +9,8 @@ from matplotlib.patches import Ellipse
 import matplotlib.pyplot as plt
 from scipy.linalg import block_diag
 from pyfisher.lensInterface import lensNoise
-import orphics.tools.cmb as cmb
-from orphics.tools.io import dictFromSection, listFromConfig
+import orphics.cosmology as cosmo
+from orphics.io import list_from_config
 
 
 
@@ -18,8 +18,8 @@ from orphics.tools.io import dictFromSection, listFromConfig
 def fisher_from_config(fidCls,dCls,paramList,Config,expName,lensName=None,TCMB=2.7255e6,beamsOverride=None,noisesOverride=None,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None,tellminOverride=None,pellminOverride=None,tellmaxOverride=None,pellmaxOverride=None):
     fnTT, fnEE = noiseFromConfig(Config,expName,TCMB,beamsOverride,noisesOverride,lkneeTOverride,lkneePOverride,alphaTOverride,alphaPOverride,tellminOverride,pellminOverride,tellmaxOverride,pellmaxOverride)
 
-    tellmin,tellmax = listFromConfig(Config,expName,'tellrange')
-    pellmin,pellmax = listFromConfig(Config,expName,'pellrange')
+    tellmin,tellmax = list_from_config(Config,expName,'tellrange')
+    pellmin,pellmax = list_from_config(Config,expName,'pellrange')
     if tellminOverride is not None: tellmin = tellminOverride
     if tellmaxOverride is not None: tellmax = tellmaxOverride
     if pellminOverride is not None: pellmin = pellminOverride
@@ -31,8 +31,8 @@ def fisher_from_config(fidCls,dCls,paramList,Config,expName,lensName=None,TCMB=2
 
     
         # Pad CMB lensing noise with infinity outside L ranges
-        kellmin,kellmax = listFromConfig(Config,lensName,'Lrange')
-        fnKK = cmb.noise_pad_infinity(interp1d(ls,Nls,fill_value=np.inf,bounds_error=False),kellmin,kellmax)
+        kellmin,kellmax = list_from_config(Config,lensName,'Lrange')
+        fnKK = cosmo.noise_pad_infinity(interp1d(ls,Nls,fill_value=np.inf,bounds_error=False),kellmin,kellmax)
     else:
         doLens = False
         fnKK = lambda x: np.nan
@@ -122,6 +122,8 @@ def calcFisher(paramList,ellrange,fidCls,dCls,fnTT,fnEE,fnKK,fsky,lensing=True,v
             dCov1 = CovFromVecs(dCls[param1],ell,lensing=lensing)
             dCov2 = CovFromVecs(dCls[param2],ell,lensing=lensing)
             InvCov = np.linalg.inv(Cov)
+            #InvCov = 1./Cov
+            #Fell += (2.*ell+1.) * fsky * InvCov*dCov1*InvCov*dCov2 /2.
             Fell += (2.*ell+1.) * fsky * np.trace(np.dot(np.dot(InvCov,dCov1),np.dot(InvCov,dCov2))) /2.
 
 
@@ -181,22 +183,22 @@ def loadFishers(filepaths):
 
 def noiseFromConfig(Config,expName,TCMB=2.7255e6,beamsOverride=None,noisesOverride=None,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None,tellminOverride=None,pellminOverride=None,tellmaxOverride=None,pellmaxOverride=None):
 
-    tellmin,tellmax = listFromConfig(Config,expName,'tellrange')
+    tellmin,tellmax = list_from_config(Config,expName,'tellrange')
     if tellminOverride is not None: tellmin = tellminOverride
     if tellmaxOverride is not None: tellmax = tellmaxOverride
-    pellmin,pellmax = listFromConfig(Config,expName,'pellrange')
+    pellmin,pellmax = list_from_config(Config,expName,'pellrange')
     if pellminOverride is not None: pellmin = pellminOverride
     if pellmaxOverride is not None: pellmax = pellmaxOverride
     if beamsOverride is not None:
         beams = beamsOverride
     else:
-        beams = listFromConfig(Config,expName,'beams')
+        beams = list_from_config(Config,expName,'beams')
     if noisesOverride is not None:
         noises = noisesOverride
     else:
-        noises = listFromConfig(Config,expName,'noises')
-    lkneeT,lkneeP = listFromConfig(Config,expName,'lknee')
-    alphaT,alphaP = listFromConfig(Config,expName,'alpha')
+        noises = list_from_config(Config,expName,'noises')
+    lkneeT,lkneeP = list_from_config(Config,expName,'lknee')
+    alphaT,alphaP = list_from_config(Config,expName,'alpha')
     if lkneeTOverride is not None: lkneeT = lkneeTOverride
     if lkneePOverride is not None: lkneeP = lkneePOverride
     if alphaTOverride is not None: alphaT = alphaTOverride
@@ -205,8 +207,8 @@ def noiseFromConfig(Config,expName,TCMB=2.7255e6,beamsOverride=None,noisesOverri
     invnTTs = 0.
     invnEEs = 0.
     for beam,noise in zip(beams,noises):
-       invnTTs += 1./cmb.noise_func(np.arange(tellmin,tellmax),beam,noise,lknee=lkneeT,alpha=alphaT,TCMB=TCMB)
-       invnEEs += 1./cmb.noise_func(np.arange(pellmin,pellmax),beam,noise*np.sqrt(2.),lknee=lkneeP,alpha=alphaP,TCMB=TCMB)
+       invnTTs += 1./cosmo.noise_func(np.arange(tellmin,tellmax),beam,noise,lknee=lkneeT,alpha=alphaT,TCMB=TCMB)
+       invnEEs += 1./cosmo.noise_func(np.arange(pellmin,pellmax),beam,noise*np.sqrt(2.),lknee=lkneeP,alpha=alphaP,TCMB=TCMB)
 
     fnTT = interp1d(np.arange(tellmin,tellmax),1./invnTTs,bounds_error=False,fill_value=np.inf)
     fnEE = interp1d(np.arange(pellmin,pellmax),1./invnEEs,bounds_error=False,fill_value=np.inf)
@@ -214,7 +216,7 @@ def noiseFromConfig(Config,expName,TCMB=2.7255e6,beamsOverride=None,noisesOverri
     return fnTT, fnEE
 
 def testAgainstKSmith(pmax,beamFWHMArcmin,dCls,lclbb,rExp,rInFid,fCls,fsky):
-    from orphics.tools.io import Plotter
+    from orphics.io import Plotter
     pl = Plotter(scaleX='log',scaleY='log')
     pnoiserange = np.logspace(np.log10(0.5),np.log10(50.),num=100)
     for pmin in [2,5,10,40]:
@@ -232,4 +234,3 @@ def testAgainstKSmith(pmax,beamFWHMArcmin,dCls,lclbb,rExp,rInFid,fCls,fsky):
     pl._ax.set_xlim(0.5,50.)
     pl._ax.set_ylim(1.e-5,1.e-1)
     pl.done("kenplot.png")    
-
