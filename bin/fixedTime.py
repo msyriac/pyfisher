@@ -6,11 +6,10 @@ from scipy.interpolate import interp1d
 import argparse
 from pyfisher.lensInterface import lensNoise
 from pyfisher.clFisher import tryLoad, calcFisher, loadFishers, noiseFromConfig, rSigma
-from orphics.tools.io import dictFromSection, listFromConfig, printC
-import orphics.tools.cmb as cmb
-from orphics.theory.gaussianCov import LensForecast
+from orphics.io import dict_from_section, list_from_config, cprint, Plotter
+from orphics.cosmology import LensForecast
 import cPickle as pickle
-from orphics.tools.io import Plotter
+from orphics import cosmology
 
 # Get the name of the experiment and lensing type from command line
 parser = argparse.ArgumentParser(description='Run a Fisher test.')
@@ -59,7 +58,7 @@ for noiseNow,fskyNow in zip(noiseList,fskyList):
 
     efficiencies.append(efficiency)
     
-    printC("Delensing efficiency: "+ str(efficiency) + " %",color="green",bold=True)
+    cprint("Delensing efficiency: "+ str(efficiency) + " %",color="green",bold=True)
 
     # File root name for Fisher derivatives
     derivRoot = Config.get("fisher","derivRoot")
@@ -83,12 +82,12 @@ for noiseNow,fskyNow in zip(noiseList,fskyList):
     # Get CMB noise functions and ell ranges. Note that the same overriding is possible but here the beams and noises have to be lists for the different frequencies.
     fnTT, fnEE = noiseFromConfig(Config,expName,TCMB=TCMB,beamsOverride=None,noisesOverride=[noiseNow],lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None)
 
-    tellmin,tellmax = listFromConfig(Config,expName,'tellrange')
-    pellmin,pellmax = listFromConfig(Config,expName,'pellrange')
+    tellmin,tellmax = list_from_config(Config,expName,'tellrange')
+    pellmin,pellmax = list_from_config(Config,expName,'pellrange')
 
     # Pad CMB lensing noise with infinity outside L ranges
-    kellmin,kellmax = listFromConfig(Config,'lensing','Lrange')
-    fnKK = cmb.noise_pad_infinity(interp1d(ls,Nls,fill_value=np.inf,bounds_error=False),kellmin,kellmax)
+    kellmin,kellmax = list_from_config(Config,'lensing','Lrange')
+    fnKK = cosmology.noise_pad_infinity(interp1d(ls,Nls,fill_value=np.inf,bounds_error=False),kellmin,kellmax)
 
     # Decide on what ell range to calculate the Fisher matrix
     ellrange = np.arange(min(tellmin,pellmin,kellmin),max(tellmax,pellmax,kellmax)).astype(int)
@@ -96,6 +95,7 @@ for noiseNow,fskyNow in zip(noiseList,fskyList):
     fsky = fskyNow #Config.getfloat(expName,'fsky')
     # Calculate the Fisher matrix and add to other Fishers
     Fisher = otherFisher+calcFisher(paramList,ellrange,fidCls,dCls,lambda x: fnTT(x)*TCMB**2.,lambda x: fnEE(x)*TCMB**2.,fnKK,fsky,verbose=True)
+    # Fisher = otherFisher+calcFisher(paramList,ellrange,fidCls,dCls,lambda x: fnTT(x),lambda x: fnEE(x),fnKK,fsky,verbose=True)
 
     # Get prior sigmas and add to Fisher
     priorList = Config.get("fisher","priorList").split(',')
@@ -110,7 +110,7 @@ for noiseNow,fskyNow in zip(noiseList,fskyList):
     # get index of mnu and print marginalized constraint
     indMnu = paramList.index('mnu')
     mnu = np.sqrt(np.linalg.inv(Fisher)[indMnu,indMnu])*1000.
-    printC("Sum of neutrino masses 1-sigma: "+ str(mnu) + " meV",color="green",bold=True)
+    cprint("Sum of neutrino masses 1-sigma: "+ str(mnu) + " meV",color="green",bold=True)
 
     mnus.append(mnu)
     # CLKK S/N ============================================
@@ -122,9 +122,9 @@ for noiseNow,fskyNow in zip(noiseList,fskyList):
     LF = LensForecast()
     LF.loadKK(frange,Clkk,ls,Nls)
     sn,errs = LF.sn(snrange,fsky,"kk")
-    printC("Lensing autopower S/N: "+ str(sn),color="green",bold=True)
+    cprint("Lensing autopower S/N: "+ str(sn),color="green",bold=True)
 
-    # pl = Plotter(scaleY='log',scaleX='log')
+    # pl = Plotter(scaleY='log',xscale='log')
     # pl.add(frange,Clkk)
     # pl.add(ls,Nls)
     # pl._ax.set_ylim(-max(Clkk),max(Clkk))
@@ -136,10 +136,10 @@ for noiseNow,fskyNow in zip(noiseList,fskyList):
     
     # r Forecast ============================================
 
-    spellmin,spellmax = listFromConfig(Config,'rForecast','pellrange')
+    spellmin,spellmax = list_from_config(Config,'rForecast','pellrange')
     fnTT, fnEE = noiseFromConfig(Config,expName,TCMB=TCMB,beamsOverride=None,noisesOverride=[noiseNow],lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None,pellminOverride=spellmin,pellmaxOverride=spellmax)
 
-    fnBBSmall = lambda x: cmb.noise_pad_infinity(fnEE,spellmin,spellmax)(x)*TCMB**2.
+    fnBBSmall = lambda x: cosmology.noise_pad_infinity(fnEE,spellmin,spellmax)(x)*TCMB**2.
 
     # differentiating between small and large telescope for future compatibility
     assert spellmin<=pellmin, "Why does your large telescope have a smaller lmin_P than the small one?"
@@ -154,18 +154,18 @@ for noiseNow,fskyNow in zip(noiseList,fskyList):
     dCls = np.loadtxt(dFile,delimiter=",")
     fCls = np.loadtxt(fFile,delimiter=",")
 
-    from orphics.theory.cosmology import Cosmology
+    from orphics.cosmology import Cosmology
     cc = Cosmology(lmax=int(max(pellmax,spellmax)),pickling=True)
     theory = cc.theory
 
     ellBBRange = np.arange(spellmin,spellmax)
 
-    fclbb = cmb.noise_pad_infinity(interp1d(ellBBRange,theory.lCl('BB',ellBBRange)*TCMB**2.,fill_value=np.inf,bounds_error=False),spellmin,spellmax)
+    fclbb = cosmology.noise_pad_infinity(interp1d(ellBBRange,theory.lCl('BB',ellBBRange)*TCMB**2.,fill_value=np.inf,bounds_error=False),spellmin,spellmax)
 
 
     # clbbnow = theory.lCl('BB',ellBBRange)#*TCMB**2.
 
-    # pl = Plotter(scaleY='log',scaleX='log')
+    # pl = Plotter(scaleY='log',xscale='log')
     # pl.add(ellBBRange,clbbnow*ellBBRange**2.)
     # pl.add(ellbb,dlbb*ellbb**2.)
     # # pl._ax.set_ylim(-max(Clkk),max(Clkk))
@@ -175,12 +175,12 @@ for noiseNow,fskyNow in zip(noiseList,fskyList):
     fflbb = interp1d(range(len(fCls[:,2])),rExp*fCls[:,2]/rInFid,bounds_error=False,fill_value=np.inf)
     fdCls = interp1d(range(len(dCls[:,2])),dCls[:,2],bounds_error=False,fill_value=np.inf)
 
-    from orphics.tools.io import Plotter
+    from orphics.io import Plotter
     ells = np.arange(0,len(fidCls[:,0]),1)
     clee = fidCls[:,1]
     clbb = fidCls[:,2]
     nlbbsmall = fnBBSmall(ells)
-    pl = Plotter(scaleY='log')
+    pl = Plotter(yscale='log')
     pl.add(ells,clee*ells*(ells+1.)/2./np.pi)
     pl.add(ells,clbb*ells*(ells+1.)/2./np.pi)
     pl.add(ells,nlbbsmall*ells*(ells+1.)/2./np.pi)
@@ -189,14 +189,14 @@ for noiseNow,fskyNow in zip(noiseList,fskyList):
 
     fclbbTot = lambda x: fclbb(x)*(1.+fgPer/100.)
     r0 = rSigma(fsky,ellBBRange,fnBBSmall,fdCls,fclbbTot,fflbb)
-    printC("sigma(r) without delensing: "+ str(r0*1e4)+"e-4",color="green",bold=True)
+    cprint("sigma(r) without delensing: "+ str(r0*1e4)+"e-4",color="green",bold=True)
     rs.append(r0)
-    fdlbb = cmb.noise_pad_infinity(interp1d(ellbb,dlbb*TCMB**2.,fill_value=np.inf,bounds_error=False),spellmin,spellmax)
+    fdlbb = cosmology.noise_pad_infinity(interp1d(ellbb,dlbb*TCMB**2.,fill_value=np.inf,bounds_error=False),spellmin,spellmax)
 
     fclbbTot = lambda x: fdlbb(x)+fclbb(x)*fgPer/100.
 
     r = rSigma(fsky,ellBBRange,fnBBSmall,fdCls,fclbbTot,fflbb)
-    printC("sigma(r) with delensing: "+ str(r*1e4)+"e-4",color="green",bold=True)
+    cprint("sigma(r) with delensing: "+ str(r*1e4)+"e-4",color="green",bold=True)
     rdelens.append(r)
 
 
@@ -204,21 +204,21 @@ for noiseNow,fskyNow in zip(noiseList,fskyList):
 
 outDir = os.environ['WWW']+"plots/fixtime/"+saveName+"_"
 
-pl = Plotter(labelX="$f_{\\mathrm{sky}}$",labelY="delensing %")
+pl = Plotter(xlabel="$f_{\\mathrm{sky}}$",ylabel="delensing %")
 pl.add(fskyList,efficiencies)
 pl.done(outDir + "efficiencies.png")
 
-# pl = Plotter(labelX="$f_{\\mathrm{sky}}$",labelY="sig(mnu)")
+# pl = Plotter(xlabel="$f_{\\mathrm{sky}}$",ylabel="sig(mnu)")
 # pl.add(fskyList,mnus)
 # pl.done(outDir + "mnus.png")
 
-pl = Plotter(labelX="$f_{\\mathrm{sky}}$",labelY="Clkk S/N")
+pl = Plotter(xlabel="$f_{\\mathrm{sky}}$",ylabel="Clkk S/N")
 pl.add(fskyList,sns)
 pl.done(outDir + "sns.png")
 
-pl = Plotter(labelX="$f_{\\mathrm{sky}}$",labelY="sig(r)",scaleX='log',scaleY='log')
+pl = Plotter(xlabel="$f_{\\mathrm{sky}}$",ylabel="sig(r)",xscale='log',yscale='log')
 pl.add(fskyList,rs,ls="--",label="no delensing")
 pl.add(fskyList,rdelens,label="with delensing")
 #pl._ax.set_ylim(1.e-4,1.e-2)
-pl.legendOn(loc='upper right',labsize=12)
+pl.legend(loc='upper right',labsize=12)
 pl.done(outDir + "rs.png")
