@@ -45,7 +45,6 @@ def lensNoise(Config,expName,lensName,beamOverride=None,noiseTOverride=None,lkne
     dell = 10
     #gradCut = 10000
     kellmin = 10
-    lmap = lm.makeEmptyCEATemplate(raSizeDeg=deg, decSizeDeg=deg,pixScaleXarcmin=px,pixScaleYarcmin=px)
     shape,wcs = maps.rect_geometry(width_deg = deg, px_res_arcmin=px)
 
     
