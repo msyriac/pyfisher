@@ -9,9 +9,8 @@ from matplotlib.patches import Ellipse
 import matplotlib.pyplot as plt
 from scipy.linalg import block_diag
 from pyfisher.lensInterface import lensNoise
-from orphics.io import dict_from_section, list_from_config
-from orphics import cosmology, io
-
+import orphics.cosmology as cosmo
+from orphics.io import list_from_config
 
 
 def fisher_from_config(fidCls,dCls,paramList,Config,expName,lensName=None,TCMB=2.7255e6,beamsOverride=None,noisesOverride=None,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None,tellminOverride=None,pellminOverride=None,tellmaxOverride=None,pellmaxOverride=None):
@@ -31,7 +30,7 @@ def fisher_from_config(fidCls,dCls,paramList,Config,expName,lensName=None,TCMB=2
     
         # Pad CMB lensing noise with infinity outside L ranges
         kellmin,kellmax = list_from_config(Config,lensName,'Lrange')
-        fnKK = cosmology.noise_pad_infinity(interp1d(ls,Nls,fill_value=np.inf,bounds_error=False),kellmin,kellmax)
+        fnKK = cosmo.noise_pad_infinity(interp1d(ls,Nls,fill_value=np.inf,bounds_error=False),kellmin,kellmax)
     else:
         doLens = False
         fnKK = lambda x: np.nan
@@ -98,15 +97,6 @@ def CovFromVecs(Cls,ell,nTT=0.,nEE=0.,nkk=0.,lensing=False):
 
 def calcFisher(paramList,ellrange,fidCls,dCls,fnTT,fnEE,fnKK,fsky,lensing=True,verbose=True):
     numParams = len(paramList)
-
-    # print(fidCls.shape)
-    # ells = np.arange(fidCls.shape[0])
-    # cltt = fidCls[:,0]
-    # pl = io.Plotter(yscale='log')
-    # pl.add(ells,cltt*ells**2.)
-    # pl.add(ells,fnTT(ells)*ells**2.)
-    # pl.done()
-    # sys.exit()
     
     Cls = []
     nCls = []
@@ -130,6 +120,8 @@ def calcFisher(paramList,ellrange,fidCls,dCls,fnTT,fnEE,fnKK,fsky,lensing=True,v
             dCov1 = CovFromVecs(dCls[param1],ell,lensing=lensing)
             dCov2 = CovFromVecs(dCls[param2],ell,lensing=lensing)
             InvCov = np.linalg.inv(Cov)
+            #InvCov = 1./Cov
+            #Fell += (2.*ell+1.) * fsky * InvCov*dCov1*InvCov*dCov2 /2.
             Fell += (2.*ell+1.) * fsky * np.trace(np.dot(np.dot(InvCov,dCov1),np.dot(InvCov,dCov2))) /2.
 
 
@@ -183,7 +175,10 @@ def loadFishers(filepaths):
     totFisher = 0.
     for filepath in filepaths:
         F = np.loadtxt(filepath)
-        totFisher += F
+        try:
+            totFisher += F
+        except:
+            print "Saved Fisher Matrices  don't have the same dimensions"
 
     return totFisher
 
@@ -213,8 +208,8 @@ def noiseFromConfig(Config,expName,TCMB=2.7255e6,beamsOverride=None,noisesOverri
     invnTTs = 0.
     invnEEs = 0.
     for beam,noise in zip(beams,noises):
-       invnTTs += 1./cosmology.noise_func(np.arange(tellmin,tellmax),beam,noise,lknee=lkneeT,alpha=alphaT,TCMB=TCMB,dimensionless=True)
-       invnEEs += 1./cosmology.noise_func(np.arange(pellmin,pellmax),beam,noise*np.sqrt(2.),lknee=lkneeP,alpha=alphaP,TCMB=TCMB,dimensionless=True)
+       invnTTs += 1./cosmo.noise_func(np.arange(tellmin,tellmax),beam,noise,lknee=lkneeT,alpha=alphaT,TCMB=TCMB,dimensionless=True)
+       invnEEs += 1./cosmo.noise_func(np.arange(pellmin,pellmax),beam,noise*np.sqrt(2.),lknee=lkneeP,alpha=alphaP,TCMB=TCMB,dimensionless=True)
 
     fnTT = interp1d(np.arange(tellmin,tellmax),1./invnTTs,bounds_error=False,fill_value=np.inf)
     fnEE = interp1d(np.arange(pellmin,pellmax),1./invnEEs,bounds_error=False,fill_value=np.inf)
@@ -222,7 +217,7 @@ def noiseFromConfig(Config,expName,TCMB=2.7255e6,beamsOverride=None,noisesOverri
     return fnTT, fnEE
 
 def testAgainstKSmith(pmax,beamFWHMArcmin,dCls,lclbb,rExp,rInFid,fCls,fsky):
-    from orphics.tools.io import Plotter
+    from orphics.io import Plotter
     pl = Plotter(scaleX='log',scaleY='log')
     pnoiserange = np.logspace(np.log10(0.5),np.log10(50.),num=100)
     for pmin in [2,5,10,40]:
@@ -240,4 +235,3 @@ def testAgainstKSmith(pmax,beamFWHMArcmin,dCls,lclbb,rExp,rInFid,fCls,fsky):
     pl._ax.set_xlim(0.5,50.)
     pl._ax.set_ylim(1.e-5,1.e-1)
     pl.done("kenplot.png")    
-
