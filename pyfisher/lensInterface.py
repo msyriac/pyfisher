@@ -1,15 +1,20 @@
 import numpy as np
 from scipy.interpolate import interp1d
+import sys
 
-def lensNoise(Config,expName,lensName,beamOverride=None,noiseTOverride=None,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None,tellminOverride=None,pellminOverride=None,tellmaxOverride=None,pellmaxOverride=None,deg=5.,px=1.0,gradCut=10000,bigell=9000,plot=False,theoryOverride=None,lensedEqualsUnlensed=False):
+def lensNoise(Config,expName,lensName,beamOverride=None,noiseTOverride=None,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None,tellminOverride=None,pellminOverride=None,tellmaxOverride=None,pellmaxOverride=None,deg=5.,px=1.0,gradCut=10000,bigell=9000,plot=False,theoryOverride=None,lensedEqualsUnlensed=False,noiseFuncT=None,noiseFuncP=None):
 
-    from orphics.io import dict_from_section, list_from_config
+    from orphics.io import list_from_config
 
     beam = list_from_config(Config,expName,'beams')
     noise = list_from_config(Config,expName,'noises')
     freq = list_from_config(Config,expName,'freqs')
     lkneeT,lkneeP = list_from_config(Config,expName,'lknee')
     alphaT,alphaP = list_from_config(Config,expName,'alpha')
+    if (noiseFuncT is None) and (noiseFuncP is None):
+        print 'Not using noise files for generating lensing noise'
+    else:
+        print 'Using noise files for generating lensing noise'
     tellmin,tellmax = list_from_config(Config,expName,'tellrange')
     if tellminOverride is not None: tellmin = tellminOverride
     if tellmaxOverride is not None: tellmax = tellmaxOverride
@@ -43,12 +48,12 @@ def lensNoise(Config,expName,lensName,beamOverride=None,noiseTOverride=None,lkne
     #deg = 5.
     #px = 1.0
     dell = 10
-    #gradCut = 10000
     kellmin = 10
     shape,wcs = maps.rect_geometry(width_deg = deg, px_res_arcmin=px)
 
     
     kellmax = max(tellmax,pellmax)
+
     if theoryOverride is None:
         from orphics.cosmology import Cosmology
         cc = Cosmology(lmax=int(kellmax),pickling=True)
@@ -58,10 +63,11 @@ def lensNoise(Config,expName,lensName,beamOverride=None,noiseTOverride=None,lkne
         cc = None
     bin_edges = np.arange(kellmin,kellmax,dell)
     myNls = NlGenerator(shape,wcs,theory,bin_edges,gradCut=gradCut,bigell=bigell,lensedEqualsUnlensed=lensedEqualsUnlensed)
-    myNls.updateNoise(beamX,noiseTX,np.sqrt(2.)*noiseTX,tellmin,tellmax,pellmin,pellmax,beamY=beamY,noiseTY=noiseTY,noisePY=np.sqrt(2.)*noiseTY,lkneesX=(lkneeT,lkneeP),lkneesY=(lkneeT,lkneeP),alphasX=(alphaT,alphaP),alphasY=(alphaT,alphaP))
+    myNls.updateNoise(beamX,noiseTX,np.sqrt(2.)*noiseTX,tellmin,tellmax,pellmin,pellmax,beamY=beamY,noiseTY=noiseTY,noisePY=np.sqrt(2.)*noiseTY,lkneesX=(lkneeT,lkneeP),lkneesY=(lkneeT,lkneeP),alphasX=(alphaT,alphaP),alphasY=(alphaT,alphaP),noiseFuncTX=noiseFuncT,noiseFuncTY=noiseFuncT,noiseFuncPX=noiseFuncP,noiseFuncPY=noiseFuncP)
 
     lsmv,Nlmv,ells,dclbb,efficiency = myNls.getNlIterative(pols,kellmin,kellmax,tellmax,pellmin,pellmax,dell=dell,halo=True,plot=plot)
 
      
     return lsmv,Nlmv,ells,dclbb,efficiency,cc
+
 
