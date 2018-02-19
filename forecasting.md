@@ -28,3 +28,26 @@ Typically, you will want to do something like this:
 4. Include a tau prior of 0.01 from Planck
 
 You are encouraged to use bin/driver.py with input/external.ini to achieve 1-3. Manually add a tau prior yourself to the sum of your Fisher matrices at the end. driver.py lets you save each included section of input/external.ini as a txt file whose name you specify in external.ini. Please edit the commented lines in input/external.ini appropriately.
+
+
+## Primary CMB + Lensing Clkk Fisher Matrix
+
+For this, you should edit input/params.ini
+
+and call, for e.g.,
+
+```
+python bin/lensing.py testExp lensing output/testFisher.txt
+```
+
+The first argument specifies the experiment by naming the section in input/params.ini that describes it. See the example testExp section.
+
+The second argument specifies the lensing section name that describes what Clkk configuration to use. See the example `lensing` section.
+
+The final argument specifies the name of the file to save this Fisher matrix to.
+
+## Compiling all these together
+
+Just read in these Fisher matrices and add them taking care of the parameter order. (Use orphics.stats.FisherMatrix class to make your life easier). Add a tau prior manually by adding 1./sigma_tau**2 to the tau element on the diagonal.
+
+
