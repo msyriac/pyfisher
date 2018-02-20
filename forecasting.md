@@ -11,7 +11,7 @@ for external Fisher matrices (Planck, BAO, etc.) so that those get saved to `out
 Then use
 
 ```
-python bin/lensing.py input/params.ini
+python bin/lensing.py testExp lensing output/testFisher.txt
 ```
 
 to create a Fisher matrix for the primary CMB and for Clkk and save this to `output/`.
