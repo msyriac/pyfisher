@@ -16,8 +16,8 @@ parser = argparse.ArgumentParser(description='Run a Fisher test.')
 parser.add_argument('expName', type=str,help='The name of the experiment in input/params.ini')
 parser.add_argument('lensName',type=str,help='The name of the CMB lensing section in input/params.ini. ')
 parser.add_argument('saveName',type=str,help='Name of file to save Fisher to.')
-parser.add_argument("-t", "--tt",     type=str,  default=None,help="Dimensionless TT noise curve file to override experiment.")
-parser.add_argument("-p", "--pp",     type=str,  default=None,help="Dimensionless PP (EE/BB) noise curve file to override experiment.")
+parser.add_argument("-t", "--tt",     type=str,  default=None,help="Dimensionless beam-deconvolved TT noise curve file to override experiment.")
+parser.add_argument("-p", "--pp",     type=str,  default=None,help="Dimensionless beam-deconvolved PP (EE/BB) noise curve file to override experiment.")
 args = parser.parse_args()
 expName = args.expName
 lensName = args.lensName

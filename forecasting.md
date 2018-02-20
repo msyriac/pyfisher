@@ -46,6 +46,17 @@ The second argument specifies the lensing section name that describes what Clkk 
 
 The final argument specifies the name of the file to save this Fisher matrix to.
 
+### Specifying an arbitrary noise file
+
+You can override part of the experiment section (which only allows for instrumental whitenoise, beam and atmospheric lknee and alpha) with your choice of beam-deconvolved effective TT and EE/BB noise curves. You use the --tt and --pp options in lensing.py. E.g.
+
+```
+python bin/lensing.py testExp lensing output/testFisher.txt --tt noise_file_tt.txt --pp noise_file_pp.txt
+```
+
+The txt files should be two columns, the first with ells and the second with dimensionless beam-deconvolved noise. The ellmins and ellmaxes form the testExp section will still be used.
+
+
 ## Compiling all these together
 
 Just read in these Fisher matrices and add them taking care of the parameter order. (Use orphics.stats.FisherMatrix class to make your life easier). Add a tau prior manually by adding 1./sigma_tau**2 to the tau element on the diagonal.
