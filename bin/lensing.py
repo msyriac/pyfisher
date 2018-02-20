@@ -16,12 +16,27 @@ parser = argparse.ArgumentParser(description='Run a Fisher test.')
 parser.add_argument('expName', type=str,help='The name of the experiment in input/params.ini')
 parser.add_argument('lensName',type=str,help='The name of the CMB lensing section in input/params.ini. ')
 parser.add_argument('saveName',type=str,help='Name of file to save Fisher to.')
+parser.add_argument("-t", "--tt",     type=str,  default=None,help="Dimensionless TT noise curve file to override experiment.")
+parser.add_argument("-p", "--pp",     type=str,  default=None,help="Dimensionless PP (EE/BB) noise curve file to override experiment.")
 args = parser.parse_args()
 expName = args.expName
 lensName = args.lensName
 saveName = args.saveName
 
 
+try:
+    elltt,ntt = np.loadtxt(args.tt,unpack=True)
+    noise_func_tt = interp1d(elltt,ntt,bounds_error=False,fill_value=np.inf)
+except:
+    noise_func_tt = None
+
+try:
+    ellee,nee = np.loadtxt(args.pp,unpack=True)
+    noise_func_ee = interp1d(ellee,nee,bounds_error=False,fill_value=np.inf)
+except:
+    noise_func_ee = None
+    
+    
 TCMB = 2.7255e6
 
 # Read config
@@ -30,7 +45,7 @@ Config = SafeConfigParser()
 Config.optionxform=str
 Config.read(iniFile)
 
-ls,Nls,ellbb,dlbb,efficiency,cc = lensNoise(Config,expName,lensName,beamOverride=None,noiseTOverride=None,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None)
+ls,Nls,ellbb,dlbb,efficiency,cc = lensNoise(Config,expName,lensName,beamOverride=None,noiseTOverride=None,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None,noiseFuncT=noise_func_tt,noiseFuncP=noise_func_ee)
 
 # File root name for Fisher derivatives
 derivRoot = Config.get("fisher","derivRoot")
@@ -45,11 +60,18 @@ for paramName in paramList:
     dCls[paramName] = tryLoad(derivRoot+'_dCls_'+paramName+'.csv',',')
 
 
-# Get CMB noise functions and ell ranges. 
-fnTT, fnEE = noiseFromConfig(Config,expName,TCMB=TCMB,beamsOverride=None,noisesOverride=None,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None)
+# Get CMB noise functions and ell ranges.
+if (noise_func_tt is None) or (noise_func_ee is None):
+    fnTT, fnEE = noiseFromConfig(Config,expName,TCMB=TCMB,beamsOverride=None,noisesOverride=None,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None)
 
 tellmin,tellmax = list_from_config(Config,expName,'tellrange')
 pellmin,pellmax = list_from_config(Config,expName,'pellrange')
+
+if (noise_func_tt is not None):
+    fnTT = cosmology.noise_pad_infinity(noise_func_tt,tellmin,tellmax)
+if (noise_func_tt is not None):
+    fnEE = cosmology.noise_pad_infinity(noise_func_ee,pellmin,pellmax)
+    
 
 # Pad CMB lensing noise with infinity outside L ranges
 kellmin,kellmax = list_from_config(Config,'lensing','Lrange')
