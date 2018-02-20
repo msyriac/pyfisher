@@ -25,13 +25,13 @@ saveName = args.saveName
 
 
 try:
-    elltt,ntt = np.loadtxt(args.tt,unpack=True)
+    elltt,ntt = np.loadtxt(args.tt,usecols=[0,1],unpack=True)
     noise_func_tt = interp1d(elltt,ntt,bounds_error=False,fill_value=np.inf)
 except:
     noise_func_tt = None
 
 try:
-    ellee,nee = np.loadtxt(args.pp,unpack=True)
+    ellee,nee = np.loadtxt(args.pp,usecols=[0,1],unpack=True)
     noise_func_ee = interp1d(ellee,nee,bounds_error=False,fill_value=np.inf)
 except:
     noise_func_ee = None
@@ -69,7 +69,7 @@ pellmin,pellmax = list_from_config(Config,expName,'pellrange')
 
 if (noise_func_tt is not None):
     fnTT = cosmology.noise_pad_infinity(noise_func_tt,tellmin,tellmax)
-if (noise_func_tt is not None):
+if (noise_func_ee is not None):
     fnEE = cosmology.noise_pad_infinity(noise_func_ee,pellmin,pellmax)
     
 
