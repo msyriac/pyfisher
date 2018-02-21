@@ -2,7 +2,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 import sys
 
-def lensNoise(Config,expName,lensName,beamOverride=None,noiseTOverride=None,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None,tellminOverride=None,pellminOverride=None,tellmaxOverride=None,pellmaxOverride=None,deg=5.,px=1.0,gradCut=10000,bigell=9000,plot=False,theoryOverride=None,lensedEqualsUnlensed=False,noiseFuncT=None,noiseFuncP=None):
+def lensNoise(Config,expName,lensName,beamOverride=None,noiseTOverride=None,lkneeTOverride=None,lkneePOverride=None,alphaTOverride=None,alphaPOverride=None,tellminOverride=None,pellminOverride=None,tellmaxOverride=None,pellmaxOverride=None,deg=5.,px=1.0,gradCut=10000,bigell=9000,plot=False,theoryOverride=None,lensedEqualsUnlensed=True,noiseFuncT=None,noiseFuncP=None):
 
     from orphics.io import list_from_config
 
@@ -62,7 +62,7 @@ def lensNoise(Config,expName,lensName,beamOverride=None,noiseTOverride=None,lkne
         theory = theoryOverride
         cc = None
     bin_edges = np.arange(kellmin,kellmax,dell)
-    myNls = NlGenerator(shape,wcs,theory,bin_edges,gradCut=gradCut,bigell=bigell,lensedEqualsUnlensed=lensedEqualsUnlensed)
+    myNls = NlGenerator(shape,wcs,theory,bin_edges,gradCut=gradCut,bigell=bigell,unlensedEqualsLensed=lensedEqualsUnlensed)
     myNls.updateNoise(beamX,noiseTX,np.sqrt(2.)*noiseTX,tellmin,tellmax,pellmin,pellmax,beamY=beamY,noiseTY=noiseTY,noisePY=np.sqrt(2.)*noiseTY,lkneesX=(lkneeT,lkneeP),lkneesY=(lkneeT,lkneeP),alphasX=(alphaT,alphaP),alphasY=(alphaT,alphaP),noiseFuncTX=noiseFuncT,noiseFuncTY=noiseFuncT,noiseFuncPX=noiseFuncP,noiseFuncPY=noiseFuncP)
 
     lsmv,Nlmv,ells,dclbb,efficiency = myNls.getNlIterative(pols,kellmin,kellmax,tellmax,pellmin,pellmax,dell=dell,halo=True,plot=plot)
