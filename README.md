@@ -51,3 +51,9 @@ Edit `input/fisherDebug.ini` and run
 ```
 python bin/driver.py input/fisherDebug.ini
 ```
+
+### A tutorial
+
+A very common forecasting scenario is combining a future CMB experiment with existing Planck data and BAO. Please read this tutorial for suggestions on how to do this with pyfisher.
+
+https://github.com/msyriac/pyfisher/blob/master/forecasting.md
