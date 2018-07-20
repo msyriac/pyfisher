@@ -15,7 +15,7 @@ def getHubbleCosmology(theta,params,precision = 0.00001,H0init = 70.,H0max = 100
     pars = camb.CAMBparams()
     pars.set_accuracy(AccuracyBoost=2.0, lSampleBoost=2.0, lAccuracyBoost=2.0)
     #pars.set_accuracy(AccuracyBoost=3.0, lSampleBoost=3.0, lAccuracyBoost=3.0)
-    pars.set_dark_energy(w=params['w'])
+    pars.set_dark_energy(w=params['w'],wa=params['wa'],dark_energy_model='ppf')
     pars.InitPower.set_params(As=params['As'],ns=params['ns'],r=params['r'])
     #no need for this: pars.set_for_lmax(lmax=int(params['lmax']), lens_potential_accuracy=1, max_eta_k=2*params['lmax'])
 
