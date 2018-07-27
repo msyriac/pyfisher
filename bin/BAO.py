@@ -8,7 +8,7 @@ import sys
 import ConfigParser
 import itertools
 
-from makeDerivs import getHubbleCosmology
+from pyfisher.core import getHubbleCosmology
 
 def getBAOCamb(zrange,params,AccuracyBoost=False):
     '''
@@ -33,7 +33,7 @@ def main(argv):
     verbose=True
 
     # Read Config
-    iniFile = "input/makeDefaultsBAO.ini"
+    iniFile = "input/makeDefaultsBAO_szar.ini"
     Config = ConfigParser.SafeConfigParser()
     Config.optionxform = str
     Config.read(iniFile)

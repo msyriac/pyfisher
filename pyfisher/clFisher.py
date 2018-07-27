@@ -97,7 +97,7 @@ def CovFromVecs(Cls,ell,nTT=0.,nEE=0.,nkk=0.,lensing=False):
 
 def calcFisher(paramList,ellrange,fidCls,dCls,fnTT,fnEE,fnKK,fsky,lensing=True,verbose=True):
     numParams = len(paramList)
-    
+
     Cls = []
     nCls = []
     # Loop through each unique parameter combination
