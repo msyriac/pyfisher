@@ -18,7 +18,7 @@ def getPowerCamb(params,spec='lensed_scalar',AccuracyBoost=False):
         pars.set_accuracy(AccuracyBoost=2.0, lSampleBoost=2.0, lAccuracyBoost=2.0)
         # pars.set_accuracy(AccuracyBoost=3.0, lSampleBoost=3.0, lAccuracyBoost=3.0)
     pars.set_cosmology(H0=params['H0'], ombh2=params['ombh2'], omch2=params['omch2'], tau=params['tau'],mnu=params['mnu'],nnu=params['nnu'],omk=params['omk'],num_massive_neutrinos=int(params['num_massive_neutrinos']),TCMB=params['TCMB'])
-    pars.set_dark_energy(w=params['w'],dark_energy_model='ppf')
+    pars.set_dark_energy(w=params['w'],wa=params['wa'],dark_energy_model='ppf')
     pars.InitPower.set_params(As=params['As'],ns=params['ns'],r=params['r'],pivot_scalar=params['s_pivot'], pivot_tensor=params['t_pivot'])
     #pars.set_for_lmax(lmax=int(params['lmax']), lens_potential_accuracy=1, max_eta_k=2*params['lmax'])
     #pars.set_for_lmax(lmax=int(params['lmax']), lens_potential_accuracy=2.0, max_eta_k=50000.0)
@@ -63,7 +63,7 @@ def getPowerCamb(params,spec='lensed_scalar',AccuracyBoost=False):
 if True:
 
     # Read Config
-    iniFile = os.environ['FISHER_DIR']+"/input/makeDefaults_szar.ini"
+    iniFile = os.environ['FISHER_DIR']+"/input/" + sys.argv[1] #"makeDefaults_szar.ini"
     #iniFile = os.environ['FISHER_DIR']+'/input/June2_makeDerivs_optimal.ini'
     Config = ConfigParser.SafeConfigParser()
     Config.optionxform = str

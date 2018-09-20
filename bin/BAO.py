@@ -33,7 +33,7 @@ def main(argv):
     verbose=True
 
     # Read Config
-    iniFile = "input/makeDefaultsBAO_szar.ini"
+    iniFile = "input/" + argv[0] #"makeDefaultsBAO_szar.ini"
     Config = ConfigParser.SafeConfigParser()
     Config.optionxform = str
     Config.read(iniFile)
