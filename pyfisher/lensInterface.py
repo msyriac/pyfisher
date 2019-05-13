@@ -12,9 +12,9 @@ def lensNoise(Config,expName,lensName,beamOverride=None,noiseTOverride=None,lkne
     lkneeT,lkneeP = list_from_config(Config,expName,'lknee')
     alphaT,alphaP = list_from_config(Config,expName,'alpha')
     if (noiseFuncT is None) and (noiseFuncP is None):
-        print 'Not using noise files for generating lensing noise'
+        print ('Not using noise files for generating lensing noise')
     else:
-        print 'Using noise files for generating lensing noise'
+        print ('Using noise files for generating lensing noise')
     tellmin,tellmax = list_from_config(Config,expName,'tellrange')
     if tellminOverride is not None: tellmin = tellminOverride
     if tellmaxOverride is not None: tellmax = tellmaxOverride

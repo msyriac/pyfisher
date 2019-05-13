@@ -40,7 +40,7 @@ except:
 TCMB = 2.7255e6
 
 # Read config
-iniFile = "input/params.ini"
+iniFile = "input/params_local.ini"
 Config = SafeConfigParser()
 Config.optionxform=str
 Config.read(iniFile)

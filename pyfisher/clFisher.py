@@ -3,7 +3,7 @@ import itertools
 import numpy as np
 import sys
 from scipy.interpolate import interp1d
-import ConfigParser
+from configparser import ConfigParser
 import traceback
 from matplotlib.patches import Ellipse
 import matplotlib.pyplot as plt
@@ -178,7 +178,7 @@ def loadFishers(filepaths):
         try:
             totFisher += F
         except:
-            print "Saved Fisher Matrices  don't have the same dimensions"
+            print ("Saved Fisher Matrices  don't have the same dimensions")
 
     return totFisher
 
