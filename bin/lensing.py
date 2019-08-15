@@ -1,6 +1,6 @@
 import sys, os
-from configparser import SafeConfigParser 
-import cPickle as pickle
+from configparser import ConfigParser 
+import pickle
 import numpy as np
 from scipy.interpolate import interp1d
 import argparse
@@ -8,7 +8,6 @@ from pyfisher.lensInterface import lensNoise
 from pyfisher.clFisher import tryLoad, calcFisher, loadFishers, noiseFromConfig, rSigma
 from orphics.io import dict_from_section, list_from_config, cprint, Plotter
 from orphics.cosmology import LensForecast
-import cPickle as pickle
 from orphics import cosmology
 
 # Get the name of the experiment and lensing type from command line
@@ -41,7 +40,7 @@ TCMB = 2.7255e6
 
 # Read config
 iniFile = "input/params_local.ini"
-Config = SafeConfigParser()
+Config = ConfigParser()
 Config.optionxform=str
 Config.read(iniFile)
 
