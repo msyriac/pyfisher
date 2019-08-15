@@ -65,7 +65,9 @@ def lensNoise(Config,expName,lensName,beamOverride=None,noiseTOverride=None,lkne
     myNls = NlGenerator(shape,wcs,theory,bin_edges,gradCut=gradCut,bigell=bigell,unlensedEqualsLensed=lensedEqualsUnlensed)
     myNls.updateNoise(beamX,noiseTX,np.sqrt(2.)*noiseTX,tellmin,tellmax,pellmin,pellmax,beamY=beamY,noiseTY=noiseTY,noisePY=np.sqrt(2.)*noiseTY,lkneesX=(lkneeT,lkneeP),lkneesY=(lkneeT,lkneeP),alphasX=(alphaT,alphaP),alphasY=(alphaT,alphaP),noiseFuncTX=noiseFuncT,noiseFuncTY=noiseFuncT,noiseFuncPX=noiseFuncP,noiseFuncPY=noiseFuncP)
 
-    lsmv,Nlmv,ells,dclbb,efficiency = myNls.getNlIterative(pols,kellmin,kellmax,tellmax,pellmin,pellmax,dell=dell,halo=True,plot=plot)
+#    lsmv,Nlmv,ells,dclbb,efficiency = myNls.getNlIterative(pols,kellmin,kellmax,tellmax,pellmin,pellmax,dell=dell,halo=True,plot=plot)
+    lsmv,Nlmv,ells,dclbb,efficiency = myNls.getNlIterative(pols,pellmin,pellmax,dell=dell,halo=True,plot=plot,kappa_min=kellmin,kappa_max=kellmax)
+#kellmin,kellmax,tellmax,pellmin,pellmax,dell=dell,halo=True,plot=plot)
 
      
     return lsmv,Nlmv,ells,dclbb,efficiency,cc
