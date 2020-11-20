@@ -10,31 +10,15 @@ parser = argparse.ArgumentParser(description='Do a thing.')
 parser.add_argument("exp_name", type=str,help='Positional arg.')
 parser.add_argument("--boss-include",     type=str,  default='6df,mgs,lowz,cmass',help="A description.")
 parser.add_argument("--input-path",     type=str,  default='input',help="Relative path to directory with experiment info.")
+parser.add_argument("--exclude",     type=str,  default='As,ns,tau,r',help="Relative path to directory with experiment info.")
 required_args = parser.add_argument_group('Required arguments')
 required_args.add_argument("-o","--output",type=str,help="Output root",required=True)
 required_args.add_argument("-p","--param-file",type=str,help="Parameter file",required=True)
 args = parser.parse_args()
 
-
+exclude = args.exclude.split(',')
 zs,sig_pers = pyfisher.load_bao_experiment_rs_dV_diagonal(args.exp_name,args.input_path,boss_include=args.boss_include.split(','))
-param_dat = np.genfromtxt(args.param_file,dtype=None,encoding='utf-8',delimiter=',')
-jobs = []
-jobs.append((None,None,'f'))
-fids = {}
-for p in param_dat:
-    param = p[0]
-    fid = p[1]
-    fids[param] = fid
-    pstr = str(p[2]).strip()
-    if pstr[-1]=='%': 
-        step = float(pstr[:-1])*np.abs(fid)/100.
-    else:
-        step = float(pstr)
-    print(step)
-    assert step>0
-    jobs.append((param,fid+step,'u'))
-    jobs.append((param,fid-step,'d'))
-
+jobs,fids = pyfisher.get_jobs(args.param_file,exclude)
 njobs = len(jobs)
 comm,rank,my_tasks = mpi.distribute(njobs)
 

@@ -18,40 +18,32 @@ Unified framework for supporting:
 
 """
 
-# def bandpower_gaussian_covariance
+#def cls_fisher(ells,specs,spec_dict,nls_dict):
+    
 
 
-# def save_symm_derivs(,fiducials,step_fracs,output_root):
-#     """
-#     Save symmetric derivatives for the given observable.
-
-#     """
-
-#     fs = fiducials
-#     vparams = sorted(step_fracs.keys())
-#     assert len(vparams)==len(set(vparams))
-
-#     nparams = len(vparams)
-
-#     comm,rank,my_tasks = mpi.distribute(nparams)
-
-#     for task in my_tasks:
-#         param = vparams[task]
-
-#         step = step_sracs[param] * fs[param]
-
-#         fparams = dict(self.fs)
-#         fparams[param] = fparams[param] + step
-#         forward = self.get_obs(observables,fparams)
-
-#         fparams = dict(self.fs)
-#         fparams[param] = fparams[param] - step
-#         backward = self.get_obs(observables,fparams)
-
-#         for obs in observables:
-#             fname = output_root + f"_{obs}_{param}_deriv.txt"
-#             d = (forward[obs] - backward[obs])/2./step
-
+def get_jobs(param_file,exclude=None):
+    param_dat = np.genfromtxt(param_file,dtype=None,encoding='utf-8',delimiter=',')
+    jobs = []
+    jobs.append((None,None,'f'))
+    fids = {}
+    for p in param_dat:
+        param = p[0]
+        if exclude is not None:
+            if param in exclude:
+                print(f"Skipping {param}")
+                continue
+        fid = p[1]
+        fids[param] = fid
+        pstr = str(p[2]).strip()
+        if pstr[-1]=='%': 
+            step = float(pstr[:-1])*np.abs(fid)/100.
+        else:
+            step = float(pstr)
+        assert step>0
+        jobs.append((param,fid+step,'u'))
+        jobs.append((param,fid-step,'d'))
+    return jobs,fids
 
 def _camb_to_class(params):
     if params['thetastar'] is not None:
