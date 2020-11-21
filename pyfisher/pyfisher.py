@@ -34,10 +34,10 @@ def get_saved_fisher(name,fsky=None,root_name='v20201120'):
         return fsky * read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}_{name}/{root_name}_{name}_planck_high_ell_TTEETE_fullsky.txt',delim=',')
     elif name=='desi_bao':
         assert fsky is None
-        return read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}_{name}/{root_name}_{name}_desi_bao_fisher.txt',delim=',')
+        return read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}_{name}/{root_name}_{name}_bao_fisher.txt',delim=',')
     elif name=='boss_bao':
         assert fsky is None
-        return read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}_{name}/{root_name}_{name}_boss_bao_fisher.txt',delim=',')
+        return read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}_{name}/{root_name}_{name}_bao_fisher.txt',delim=',')
 
 def get_lensing_fisher(bin_edges,ells,nls,fsky,root_name='v20201120'):
     param_file = f'{os.path.realpath(__file__)}/data/{root_name}_cmb_derivs/params.txt'
