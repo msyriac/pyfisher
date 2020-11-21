@@ -28,24 +28,25 @@ def prepare_output(args, message=""):
 def get_saved_fisher(name,fsky=None,root_name='v20201120'):
     if name=='planck_lowell':
         fsky = 1 if fsky is None else fsky
-        return fsky * read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}/{root_name}_planck_low_ell_TT_fullsky.txt',delim=',')
+        return fsky * read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}_{name}/{root_name}_{name}_planck_low_ell_TT_fullsky.txt',delim=',')
     elif name=='planck_highell':
         fsky = 1 if fsky is None else fsky
-        return fsky * read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}/{root_name}_planck_high_ell_TTEETE_fullsky.txt',delim=',')
+        return fsky * read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}_{name}/{root_name}_{name}_planck_high_ell_TTEETE_fullsky.txt',delim=',')
     elif name=='desi_bao':
         assert fsky is None
-        return read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}/{root_name}_desi_bao_fisher.txt',delim=',')
+        return read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}_{name}/{root_name}_{name}_desi_bao_fisher.txt',delim=',')
     elif name=='boss_bao':
         assert fsky is None
-        return read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}/{root_name}_boss_bao_fisher.txt',delim=',')
+        return read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}_{name}/{root_name}_{name}_boss_bao_fisher.txt',delim=',')
 
-def get_lensing_fisher(nls,fsky=None,root_name='v20201120'):
-    param_file = f'{os.path.realpath(__file__)}/data/{root_name}/params.txt'
-    param_dat = np.genfromtxt(param_file,dtype=None,encoding='utf-8',delimiter=',')
-    _,fids = get_param_info(args.param_file,exclude=None)
-
+def get_lensing_fisher(bin_edges,ells,nls,fsky,root_name='v20201120'):
+    param_file = f'{os.path.realpath(__file__)}/data/{root_name}_cmb_derivs/params.txt'
+    _,fids = get_param_info(param_file,exclude=None)
     param_list = list(fids.keys())
-    F1 = pyfisher.get_planck_cmb_fisher(param_list,np.arange(2,31),['TT'],args.input,fsky=1)
+    nl_dict = {'kk':maps.interp(ells,nls,bounds_error=True)}
+    cls = load_theory_dict(f'{os.path.realpath(__file__)}/data/{root_name}_cmb_derivs/{root_name}_cmb_derivs_cmb_fiducial.txt',ells)
+    dcls = load_derivs(root_name,param_list,ells)
+    return band_fisher(param_list,bin_edges,['kk'],cls,nl_dict,dcls,interpolate=interpolate)
 
 
 
