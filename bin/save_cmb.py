@@ -53,7 +53,7 @@ for task in my_tasks:
     io.save_cols(fname,saves,header=hstr)
 
 if rank==0:
-
+    comm.Barrier()
     def read(param,ud):
         filename = f'{out_name}_cmb_{param}_{ud}.txt'
         with open(filename,'r') as f:
