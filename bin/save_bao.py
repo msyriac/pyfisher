@@ -1,7 +1,7 @@
 from __future__ import print_function
 from orphics import maps,io,cosmology,stats,mpi
 import numpy as np
-import os,sys
+import os,sys,shutil
 import pyfisher
 
 import argparse
@@ -18,15 +18,13 @@ args = parser.parse_args()
 
 
 output_root = pyfisher.prepare_output(args,"save_bao.py BAO Fisher Matrix run")
-sys.exit()
 
 exclude = args.exclude.split(',')
 zs,sig_pers = pyfisher.load_bao_experiment_rs_dV_diagonal(args.exp_name,args.input_path,boss_include=args.boss_include.split(','))
 jobs,fids = pyfisher.get_param_info(args.param_file,exclude)
+shutil.copyfile(args.param_file,args.output+"/"+os.path.basename(args.param_file))
 njobs = len(jobs)
 comm,rank,my_tasks = mpi.distribute(njobs)
-
-
 
 for task in my_tasks:
     param,val,ptype = jobs[task]
@@ -66,4 +64,4 @@ if rank==0:
         assert param==uparam==dparam
         deriv_theory[param] = (udata-ddata) / (uval-dval)
     Fmat = pyfisher.get_bao_fisher_rs_dV_diagonal(list(fids.keys()),deriv_theory,fiducial_theory,sig_pers)
-    stats.write_fisher(f'{output_root}_bao_fisher.txt',Fmat,delim=',')
+    pyfisher.write_fisher(f'{output_root}_bao_fisher.txt',Fmat,delim=',')

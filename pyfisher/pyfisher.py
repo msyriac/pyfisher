@@ -20,6 +20,7 @@ def prepare_output(args, message=""):
         for arg in vars(args):
             f.write(f'{arg} :  {getattr(args, arg)}\n')
         info = get_info(path=os.path.realpath(__file__))
+        assert not(info['changes']), "Git must not have changes to run this script."
         f.write(pretty_info(info))
     output_root = f'{output_path}/{rname}'
     return output_root
@@ -499,6 +500,7 @@ def get_s8(zs=[0.],params=None,nonlinear=False,kmax=5.2,**kwargs):
 
 def get_bao_rs_dV(zs,params=None,engine='camb',de='ppf'):
     #FIXME: camb and class only agree at 3% level!!!
+    import camb
     params = map_params(params,engine=engine)
     if engine=='camb':
         pars = set_camb_pars(params=params,de=de)
