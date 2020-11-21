@@ -28,10 +28,10 @@ def prepare_output(args, message=""):
 def get_saved_fisher(name,fsky=None,root_name='v20201120'):
     if name=='planck_lowell':
         fsky = 1 if fsky is None else fsky
-        return fsky * read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}_{name}/{root_name}_{name}_planck_low_ell_TT_fullsky.txt',delim=',')
+        return fsky * read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}_saved_cmb/{root_name}_saved_cmb_planck_low_ell_TT_fullsky.txt',delim=',')
     elif name=='planck_highell':
         fsky = 1 if fsky is None else fsky
-        return fsky * read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}_{name}/{root_name}_{name}_planck_high_ell_TTEETE_fullsky.txt',delim=',')
+        return fsky * read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}_saved_cmb/{root_name}_saved_cmb_planck_high_ell_TTEETE_fullsky.txt',delim=',')
     elif name=='desi_bao':
         assert fsky is None
         return read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}_{name}/{root_name}_{name}_bao_fisher.txt',delim=',')
