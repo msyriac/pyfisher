@@ -1,7 +1,7 @@
 from __future__ import print_function
 from orphics import maps,io,cosmology,stats,mpi
 import numpy as np
-import os,sys
+import os,sys,shutil
 import pyfisher
 
 import argparse
