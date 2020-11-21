@@ -237,7 +237,7 @@ def get_planck_cmb_fisher(param_list,bin_edges,specs,root_name,fsky,interpolate=
 def load_derivs(root_name,param_list,ells):
     dcls = {}
     for param in param_list:
-        dcls[param] = load_theory_dict(f'{root_name}_{param}_deriv.txt',ells)
+        dcls[param] = load_theory_dict(f'{root_name}/{os.path.basename(root_name)}_cmb_deriv.txt',ells)
     return dcls
 
 
