@@ -17,10 +17,9 @@ required_args.add_argument("-o","--output",type=str,help="Output root",required=
 required_args.add_argument("-p","--param-file",type=str,help="Parameter file",required=True)
 args = parser.parse_args()
 
-output_root = pyfisher.prepare_output(args,"save_cmb.py CMB derivatives run")
+out_name = pyfisher.prepare_output(args,"save_cmb.py CMB derivatives run")
 
 lens_exclude = args.exclude_in_lensing.split(',')
-output_root = f"{args.output}{'_linear' if args.linear else '_nonlinear'}{'_accurate' if args.accurate else ''}{'_lensed' if args.lensed else '_unlensed'}"
 param_dat = np.genfromtxt(args.param_file,dtype=None,encoding='utf-8',delimiter=',')
 shutil.copyfile(args.param_file,args.output+"/"+os.path.basename(args.param_file))
 jobs,fids = pyfisher.get_param_info(args.param_file,exclude=None)
