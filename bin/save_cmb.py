@@ -52,8 +52,8 @@ for task in my_tasks:
     hstr = ','.join([param,str(val)]) if param is not None else ""
     io.save_cols(fname,saves,header=hstr)
 
+comm.Barrier()
 if rank==0:
-    comm.Barrier()
     def read(param,ud):
         filename = f'{out_name}_cmb_{param}_{ud}.txt'
         with open(filename,'r') as f:

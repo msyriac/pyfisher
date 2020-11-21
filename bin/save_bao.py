@@ -45,8 +45,8 @@ for task in my_tasks:
     hstr = ','.join([param,str(val)]) if param is not None else ""
     np.savetxt(fname,retval,header=hstr)
 
+comm.Barrier()
 if rank==0:
-    comm.Barrier()
     def read(param,ud):
         filename = f'{output_root}_bao_{param}_{ud}.txt'
         with open(filename,'r') as f:
