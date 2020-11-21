@@ -7,6 +7,21 @@ from pandas import DataFrame
 import pandas as pd
 import datetime
 
+data_dir = f'{os.path.dirname(os.path.realpath(__file__))}/data/'
+
+def contour_plot(fisher,fiducials,fname,name=''):
+    from chainconsumer import ChainConsumer
+    mean = [fiducials[key] for key in fisher.params]
+    cov = np.linalg.inv(fisher.values)
+    parameters = fisher.params
+
+    c = ChainConsumer()
+    c.add_covariance(mean, cov, parameters=parameters, name=name)
+    c.add_marker(mean, parameters=parameters, marker_style="*", marker_size=100, color="r",name='')
+    c.configure(usetex=False, serif=False,sigma2d=True,sigmas=[1])
+    fig = c.plotter.plot()
+    fig.set_size_inches(3 + fig.get_size_inches()) 
+    fig.savefig(fname)
 
 def prepare_output(args, message=""):
     output_path = args.output
@@ -25,27 +40,34 @@ def prepare_output(args, message=""):
     output_root = f'{output_path}/{rname}'
     return output_root
 
+
+def get_fiducials(root_name='v20201120'):
+    param_file = f'{data_dir}{root_name}_cmb_derivs/params.txt'
+    _,fids = get_param_info(param_file,exclude=None)
+    return fids
+
+
 def get_saved_fisher(name,fsky=None,root_name='v20201120'):
     if name=='planck_lowell':
         fsky = 1 if fsky is None else fsky
-        return fsky * read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}_saved_cmb/{root_name}_saved_cmb_planck_low_ell_TT_fullsky.txt',delim=',')
+        return fsky * read_fisher(f'{data_dir}{root_name}_saved_cmb/{root_name}_saved_cmb_planck_low_ell_TT_fullsky.txt',delim=',')
     elif name=='planck_highell':
         fsky = 1 if fsky is None else fsky
-        return fsky * read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}_saved_cmb/{root_name}_saved_cmb_planck_high_ell_TTEETE_fullsky.txt',delim=',')
+        return fsky * read_fisher(f'{data_dir}{root_name}_saved_cmb/{root_name}_saved_cmb_planck_high_ell_TTEETE_fullsky.txt',delim=',')
     elif name=='desi_bao':
         assert fsky is None
-        return read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}_{name}/{root_name}_{name}_bao_fisher.txt',delim=',')
+        return read_fisher(f'{data_dir}{root_name}_{name}/{root_name}_{name}_bao_fisher.txt',delim=',')
     elif name=='boss_bao':
         assert fsky is None
-        return read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}_{name}/{root_name}_{name}_bao_fisher.txt',delim=',')
+        return read_fisher(f'{data_dir}{root_name}_{name}/{root_name}_{name}_bao_fisher.txt',delim=',')
 
-def get_lensing_fisher(bin_edges,ells,nls,fsky,root_name='v20201120'):
-    param_file = f'{os.path.realpath(__file__)}/data/{root_name}_cmb_derivs/params.txt'
+def get_lensing_fisher(bin_edges,ells,nls,fsky,root_name='v20201120',interpolate=True):
+    param_file = f'{data_dir}{root_name}_cmb_derivs/params.txt'
     _,fids = get_param_info(param_file,exclude=None)
     param_list = list(fids.keys())
     nl_dict = {'kk':maps.interp(ells,nls,bounds_error=True)}
-    cls = load_theory_dict(f'{os.path.realpath(__file__)}/data/{root_name}_cmb_derivs/{root_name}_cmb_derivs_cmb_fiducial.txt',ells)
-    dcls = load_derivs(root_name,param_list,ells)
+    cls = load_theory_dict(f'{data_dir}{root_name}_cmb_derivs/{root_name}_cmb_derivs_cmb_fiducial.txt',ells)
+    dcls = load_derivs(f'{data_dir}{root_name}_cmb_derivs',param_list,ells)
     return band_fisher(param_list,bin_edges,['kk'],cls,nl_dict,dcls,interpolate=interpolate)
 
 
@@ -59,12 +81,12 @@ def check_fisher_sanity(fmat,param_list):
 def write_fisher(filename,fmat,delim=','):
     np.savetxt(filename,fmat,header=(delim).join(fmat.params),delimiter=delim)
 
-def read_fisher(csv_file,delimiter=','):
-    fmat = np.loadtxt(csv_file,delimiter=delimiter)
+def read_fisher(csv_file,delim=','):
+    fmat = np.loadtxt(csv_file,delimiter=delim)
     with open(csv_file) as f:
         fline = f.readline()
     fline = fline.replace("#","")
-    columns = fline.strip().split(delimiter)
+    columns = fline.strip().split(delim)
     assert len(set(columns)) == len(columns)
     return FisherMatrix(fmat = fmat,param_list = columns)
 
