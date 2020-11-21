@@ -1,0 +1,5 @@
+#survey, z, sig(rs/dV) / (rs/dV) %
+6df,0.106,4.83
+mgs,0.15,3.87
+lowz,0.32,2.35
+cmass,0.57,1.33

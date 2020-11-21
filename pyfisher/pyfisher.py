@@ -18,8 +18,90 @@ Unified framework for supporting:
 
 """
 
-#def cls_fisher(ells,specs,spec_dict,nls_dict):
+def get_binner(bin_edges,interpolate):
+    if interpolate:
+        cents = (bin_edges[1:] + bin_edges[:-1])/2.
+        bin = lambda x: x(cents)
+    else:
+        binner = stats.bin1D(bin_edges)
+        ells = np.arange(bin_edges[0],bin_edges[-1]+1,1)
+        bin = lambda x: binner.bin(ells,x(ells))[1]
+        cents = binner.cents
+    return cents, bin
+
+def gaussian_band_covariance(bin_edges,specs,cls_dict,nls_dict,interpolate=False):
+
+    cents,bin = get_binner(bin_edges,interpolate)
+    delta_ell = np.diff(bin_edges)
+
+    def _symmz(cdict,ab):
+        try:
+            return bin(cdict[ab])
+        except KeyError:
+            try:
+                return bin(cdict[ab[::-1]])
+            except KeyError:
+                return cents*0
+            
     
+    ncomps = len(specs)
+    nbins = len(bin_edges) - 1
+    cov = np.zeros((nbins,ncomps,ncomps))
+    for i in range(ncomps):
+        for j in range(i,ncomps):
+            spec1 = specs[i]
+            spec2 = specs[j]
+
+            a,b = spec1
+            g,d = spec2
+
+            ag = a+g
+            bd = b+d
+            ad = a+d
+            bg = b+g
+
+            cl_ag = _symmz(cls_dict,ag)
+            nl_ag = _symmz(nls_dict,ag)
+            cl_bd = _symmz(cls_dict,bd)
+            nl_bd = _symmz(nls_dict,bd)
+            cl_ad = _symmz(cls_dict,ad)
+            nl_ad = _symmz(nls_dict,ad)
+            cl_bg = _symmz(cls_dict,bg)
+            nl_bg = _symmz(nls_dict,bg)
+
+            cov[:,i,j] = ((cl_ag+nl_ag)*(cl_bd+nl_bd)+(cl_ad+nl_ad)*(cl_bg+nl_bg))/(2*cents+1)/delta_ell
+            if i!=j: cov[:,i,j] = cov[:,j,i].copy()
+    return cov
+
+
+def band_fisher(param_list,bin_edges,specs,cls_dict,nls_dict,derivs_dict,interpolate=True):
+
+    cents,bin = get_binner(bin_edges,interpolate)
+    nbins = len(bin_edges) - 1
+    ncomps = len(specs)
+
+    cov = gaussian_band_covariance(bin_edges,specs,cls_dict,nls_dict,interpolate=interpolate)
+    cinv = np.linalg.inv(cov)
+
+    nparams = len(param_list)
+    Fisher = np.zeros((nparams,nparams))
+    for i in range(nparams):
+        for j in range(i,nparams):
+
+            param1 = param_list[i]
+            param2 = param_list[j]
+            dcls1 = np.zeros((nbins,ncomps))
+            dcls2 = np.zeros((nbins,ncomps))
+            for k,spec in enumerate(specs):
+                dcls1[:,k] = bin(derivs_dict[param1][spec])
+                dcls2[:,k] = bin(derivs_dict[param2][spec])
+
+            Fisher[i,j] = np.einsum('ik,ik->',np.einsum('ij,ijk->ik',dcls1,cinv),dcls2)
+            if i!=j: Fisher[j,i] = Fisher[i,j]
+
+    return stats.FisherMatrix(Fisher,param_list)
+
+
 
 
 def get_jobs(param_file,exclude=None):
@@ -325,17 +407,18 @@ def load_theory(pars,lpad=9000):
 
     theory = cosmology.TheorySpectra()
     for i,pol in enumerate(['TT','EE','BB','TE']):
-        cls =cmbmat[lSuffix][2:,i]
-        ells = np.arange(2,len(cls)+2,1)
+        cls =cmbmat[lSuffix][:,i]
+        ells = np.arange(0,len(cls),1)
         theory.loadCls(ells,cls,pol,lensed=True,interporder="linear",lpad=lpad,fill_zero=True)
-        cls = cmbmat[uSuffix][2:,i]
-        ells = np.arange(2,len(cls)+2,1)
+        cls = cmbmat[uSuffix][:,i]
+        ells = np.arange(0,len(cls),1)
         theory.loadCls(ells,cls,pol,lensed=False,interporder="linear",lpad=lpad,fill_zero=True)
 
     lensArr = cmbmat['lens_potential']
-    cldd = lensArr[2:,0]
-    ells = np.arange(2,len(cldd)+2,1)
-    clkk = cldd / 4. * (ells*(ells+1))**2.
+    cldd = lensArr[:,0]
+    ells = np.arange(0,len(cldd),1)
+    clkk = cldd.copy()
+    clkk[1:] = clkk[1:] / 4. * (ells[1:]*(ells[1:]+1))**2.
     theory.loadGenericCls(ells,clkk,"kk",lpad=lpad,fill_zero=True)
     theory.dimensionless = False
     return theory
