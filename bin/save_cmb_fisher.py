@@ -13,7 +13,6 @@ required_args.add_argument("-p","--param-file",type=str,help="Parameter file",re
 required_args.add_argument("-o","--output",type=str,help="Output root",required=True)
 args = parser.parse_args()
 
-out_name = f"{args.input}"
 param_dat = np.genfromtxt(args.param_file,dtype=None,encoding='utf-8',delimiter=',')
 _,fids = pyfisher.get_param_info(args.param_file,exclude=None)
 
