@@ -28,17 +28,18 @@ def prepare_output(args, message=""):
 def get_saved_fisher(name,fsky=None,root_name='v20201120'):
     if name=='planck_lowell':
         fsky = 1 if fsky is None else fsky
-        return fsky * read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}_planck_low_ell_TT_fullsky.txt',delim=',')
+        return fsky * read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}/{root_name}_planck_low_ell_TT_fullsky.txt',delim=',')
     elif name=='planck_highell':
         fsky = 1 if fsky is None else fsky
-        return fsky * read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}_planck_high_ell_TTEETE_fullsky.txt',delim=',')
+        return fsky * read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}/{root_name}_planck_high_ell_TTEETE_fullsky.txt',delim=',')
     elif name=='desi_bao':
         assert fsky is None
-        return read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}_desi_bao_fisher.txt',delim=',')
+        return read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}/{root_name}_desi_bao_fisher.txt',delim=',')
     elif name=='boss_bao':
         assert fsky is None
-        return read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}_boss_bao_fisher.txt',delim=',')
+        return read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}/{root_name}_boss_bao_fisher.txt',delim=',')
 
+#def get_lensing_fisher(nls,fsky=None,root_name='v20201120'):
 
 
 

@@ -22,7 +22,7 @@ output_root = pyfisher.prepare_output(args,"save_bao.py BAO Fisher Matrix run")
 exclude = args.exclude.split(',')
 zs,sig_pers = pyfisher.load_bao_experiment_rs_dV_diagonal(args.exp_name,args.input_path,boss_include=args.boss_include.split(','))
 jobs,fids = pyfisher.get_param_info(args.param_file,exclude)
-shutil.copyfile(args.param_file,args.output+"/"+os.path.basename(args.param_file))
+shutil.copyfile(args.param_file,args.output+"/params.txt")
 njobs = len(jobs)
 comm,rank,my_tasks = mpi.distribute(njobs)
 

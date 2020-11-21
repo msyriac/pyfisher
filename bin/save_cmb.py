@@ -21,7 +21,7 @@ out_name = pyfisher.prepare_output(args,"save_cmb.py CMB derivatives run")
 
 lens_exclude = args.exclude_in_lensing.split(',')
 param_dat = np.genfromtxt(args.param_file,dtype=None,encoding='utf-8',delimiter=',')
-shutil.copyfile(args.param_file,args.output+"/"+os.path.basename(args.param_file))
+shutil.copyfile(args.param_file,args.output+"/params.txt")
 jobs,fids = pyfisher.get_param_info(args.param_file,exclude=None)
 njobs = len(jobs)
 comm,rank,my_tasks = mpi.distribute(njobs)

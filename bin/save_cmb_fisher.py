@@ -9,14 +9,13 @@ import argparse
 parser = argparse.ArgumentParser(description='Do a thing.')
 required_args = parser.add_argument_group('Required arguments')
 required_args.add_argument("-i","--input",type=str,help="Input root",required=True)
-required_args.add_argument("-p","--param-file",type=str,help="Parameter file",required=True)
 required_args.add_argument("-o","--output",type=str,help="Output root",required=True)
 args = parser.parse_args()
 
 out_name = pyfisher.prepare_output(args,"save_cmb_fisher.py Planck CMB Fishers run")
 
-param_dat = np.genfromtxt(args.param_file,dtype=None,encoding='utf-8',delimiter=',')
-shutil.copyfile(args.param_file,args.output+"/"+os.path.basename(args.param_file))
+param_file = f'{args.input}/params.txt'
+param_dat = np.genfromtxt(param_file,dtype=None,encoding='utf-8',delimiter=',')
 _,fids = pyfisher.get_param_info(args.param_file,exclude=None)
 
 param_list = list(fids.keys())
