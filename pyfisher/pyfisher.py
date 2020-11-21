@@ -553,6 +553,7 @@ def load_bao_experiment_rs_dV_diagonal(exp_name,data_path,boss_include=['6df','m
     return np.asarray(zs),np.asarray(sig_pers)
 
 def get_cls(params=None,lmax=3000,accurate=False,engine='camb',de='ppf',nonlinear=True):
+    from camb import model
     params = map_params(params,engine=engine)
     if engine=='camb':
         pars = set_camb_pars(params=params,de=de)
