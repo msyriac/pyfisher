@@ -1,6 +1,6 @@
-# PyFisher
+# pyfisher 2
 
-PyFisher is a python package for calculating Fisher matrices and forecasting parameter uncertainties for CMB experiments. 
+pyfisher is a python package for calculating Fisher matrices and for forecasting parameter uncertainties for cosmological surveys.
 
 ## Installation
 
@@ -17,7 +17,7 @@ The latter step just copies symbolic links to the relevant modules into a direct
 Once this is done, you should be able to do things like
 
 ``
-import pyfisher.clFisher as clFish
+import pyfisher
 ``
 
 from anywhere on your system.

@@ -1,33 +1,271 @@
 from __future__ import print_function
-from orphics import mpi,cosmology,stats
+from orphics import cosmology,stats,maps,io
 import numpy as np
 import os,sys
-from classy import Class
-import camb
-from camb import model
-import sympy
 import warnings
+from pandas import DataFrame
+import pandas as pd
+import datetime
 
-"""
-Unified framework for supporting:
-1. CMB lensing (CLASS or CAMB)
-2. CMB power spectra (CLASS or CAMB)
-3. BAO (CLASS or CAMB)
-4. hmvec short wavelength Pge, Pgg
-5. long wavelength Pgv, Pgg, Pvv
 
-"""
+def prepare_output(args, message=""):
+    output_path = args.output
+    assert output_path.strip()[-1]!='/'
+    io.mkdir(f'{output_path}')
+    rname = os.path.basename(f'{output_path}')
+    with open(f'{output_path}/info.log','w') as f:
+        f.write(f'{message}\n')
+        now = datetime.datetime.now()
+        f.write(f'Current date and time : {now.strftime("%Y-%m-%d %H:%M:%S")}\n')
+        for arg in vars(args):
+            f.write(f'{arg} :  {getattr(args, arg)}\n')
+        info = get_info(path=os.path.realpath(__file__))
+        f.write(pretty_info(info))
+    output_root = f'{output_path}/{rname}'
+    return output_root
 
-def get_binner(bin_edges,interpolate):
-    if interpolate:
-        cents = (bin_edges[1:] + bin_edges[:-1])/2.
-        bin = lambda x: x(cents)
-    else:
-        binner = stats.bin1D(bin_edges)
-        ells = np.arange(bin_edges[0],bin_edges[-1]+1,1)
-        bin = lambda x: binner.bin(ells,x(ells))[1]
-        cents = binner.cents
-    return cents, bin
+def get_saved_fisher(name,fsky=None,root_name='v20201120'):
+    if name=='planck_lowell':
+        fsky = 1 if fsky is None else fsky
+        return fsky * read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}_planck_low_ell_TT_fullsky.txt',delim=',')
+    elif name=='planck_highell':
+        fsky = 1 if fsky is None else fsky
+        return fsky * read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}_planck_high_ell_TTEETE_fullsky.txt',delim=',')
+    elif name=='desi_bao':
+        assert fsky is None
+        return read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}_desi_bao_fisher.txt',delim=',')
+    elif name=='boss_bao':
+        assert fsky is None
+        return read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}_boss_bao_fisher.txt',delim=',')
+
+
+
+
+def check_fisher_sanity(fmat,param_list):
+    Ny,Nx = fmat.shape
+    assert Ny==Nx
+    assert Ny==len(param_list)
+    assert len(param_list)==len(set(param_list))
+
+def write_fisher(filename,fmat,delim=','):
+    np.savetxt(filename,fmat,header=(delim).join(fmat.params),delimiter=delim)
+
+def read_fisher(csv_file,delimiter=','):
+    fmat = np.loadtxt(csv_file,delimiter=delimiter)
+    with open(csv_file) as f:
+        fline = f.readline()
+    fline = fline.replace("#","")
+    columns = fline.strip().split(delimiter)
+    assert len(set(columns)) == len(columns)
+    return FisherMatrix(fmat = fmat,param_list = columns)
+
+def rename_fisher(fmat,pmapping):
+    old_params = fmat.params
+    new_params = list(old_params)
+    for key in pmapping.keys():
+        if key not in old_params: continue
+        i = old_params.index(key)
+        new_params[i] = pmapping[key]
+    return FisherMatrix(fmat=fmat.values,param_list=new_params)
+    
+class FisherMatrix(DataFrame):
+    """
+    A Fisher Matrix object that subclasses pandas.DataFrame.
+    This is essentially just a structured array that
+    has identical column and row labels.
+
+    You can initialize an empty one like:
+    >> params = ['H0','om','sigma8']
+    >> F = FisherMatrix(np.zeros((len(params),len(params))),params)
+    
+    where params is a list of parameter names. If you already have a
+    Fisher matrix 'Fmatrix' whose diagonal parameter order is specified by
+    the list 'params', then you can initialize this object as:
+    
+    >> F = FisherMatrix(Fmatrix,params)
+    
+    This makes the code 'aware' of the parameter order in a way that makes
+    handling combinations of Fishers a lot easier.
+    
+    You can set individual elements like:
+    
+    >> F['s8']['H0'] = 1.
+
+    Once you've populated the entries, you can do things like:
+    >> Ftot = F1 + F2
+    i.e. add Fisher matrices. The nice property here is that you needn't
+    have initialized these objects with the same list of parameters!
+    They can, for example, have mutually exclusive parameters, in which
+    case you end up with some reordering of a block diagonal Fisher matrix.
+    In the general case, of two overlapping parameter lists that don't
+    have the same ordering, pandas will make sure the objects are added
+    correctly.
+
+    WARNING: No other operation other than addition and multiplication is overloaded. Subtraction
+    for instance will give unpredictable behaviour. (Will likely introduce
+    NaNs) But you shouldn't be subtracting Fisher matrices anyway!
+
+    You can add a gaussian prior to a parameter:
+    >> F.add_prior('H0',2.0)
+
+    You can drop an entire parameter (which removes that row and column):
+    >> F.delete('s8')
+    which does it in place.
+
+    If you want to preserve the original before modifying, you can
+    >> Forig = F.copy()
+
+    You can get marginalized errors on each parameter as a dict:
+    >> sigmas = F.sigmas()
+
+
+    """
+    
+    def __init__(self,fmat,param_list,delete_params=None,prior_dict=None):
+        """
+        fmat            -- (n,n) shape numpy array containing initial Fisher matrix for n parameters
+        param_list      -- n-element list specifying diagonal order of fmat
+        delete_params   -- list of names of parameters you would like to delete from this 
+                        Fisher matrix when you initialize it. 
+        prior_dict      -- a dictionary that maps names of parameters to 1-sigma prior values
+                        you would like to add on initialization. This can also be done later with the 
+                        add_prior function.
+	"""
+	
+	
+        check_fisher_sanity(fmat,param_list)
+        pd.DataFrame.__init__(self,fmat.copy(),columns=param_list,index=param_list)
+        try:
+            a = self.params
+            raise ValueError # self.params should not already exist
+        except:
+            pass
+        self.params = param_list
+            
+        cols = self.columns.tolist()
+        ind = self.index.tolist()
+        assert set(self.params)==set(cols)
+        assert set(self.params)==set(ind)
+
+        if delete_params is not None:
+            self.delete(delete_params)
+        if prior_dict is not None:
+            for prior in prior_dict.keys():
+                self.add_prior(prior,prior_dict[prior])
+
+            
+    def copy(self):
+        """
+        >> Fnew = F.copy()
+        will create an independent Fnew that is not a view of the original.
+        """
+        f = FisherMatrix(pd.DataFrame.copy(self), list(self.params))
+        return f
+
+    def __radd__(self,other):
+        return self._add(other,radd=True)
+
+    def __add__(self,other):
+        return self._add(other,radd=False)
+
+    def __mul__(self,other):
+        return FisherMatrix(self.values*other,self.columns.tolist())
+
+    def __rmul__(self,other):
+        return FisherMatrix(self.values*other,self.columns.tolist())
+
+    def _add(self,other,radd=False):
+        if other is None: return self
+        F1 = pd.DataFrame(self.values,columns=self.params,index=self.params)
+        F2 = pd.DataFrame(other.values,columns=other.params,index=other.params)
+        if radd:
+            new_fpd = pd.DataFrame.radd(F1,F2,fill_value=0)
+        else:
+            new_fpd = pd.DataFrame.add(F1,F2,fill_value=0)
+        return FisherMatrix(new_fpd.values,new_fpd.columns.tolist())
+
+    def add_prior(self,param,prior):
+        """
+        Adds 1-sigma value 'prior' to the parameter name specified by 'param'
+        """
+        self[param][param] += 1./prior**2.
+        
+    def sigmas(self):
+        """
+        Returns marginalized 1-sigma uncertainties on each parameter in the Fisher matrix.
+        """
+        finv = np.linalg.inv(self.values)
+        errs = np.diagonal(finv)**(0.5)
+        return dict(zip(self.params,errs))
+    
+    def delete(self,params):
+        """
+        Given a list of parameter names 'params', deletes these from the Fisher matrix.
+        """
+        self.drop(labels=params,axis=0,inplace=True)
+        self.drop(labels=params,axis=1,inplace=True)
+        self.params = self.columns.tolist()
+        assert set(self.index.tolist())==set(self.params)
+
+    def reordered(self,params):
+        # Return a reordered version of self
+        return self[params].T[params]
+
+    def marge_var_2param(self,param1,param2):
+        """
+        Returns the sub-matrix corresponding to two parameters param1 and param2.
+        Useful for contour plots.
+        """
+        finv = np.linalg.inv(self.values)
+        i = self.params.index(param1)
+        j = self.params.index(param2)
+        chi211 = finv[i,i]
+        chi222 = finv[j,j]
+        chi212 = finv[i,j]
+        return np.array([[chi211,chi212],[chi212,chi222]])
+
+
+def get_planck_cmb_fisher(param_list,bin_edges,specs,root_name,fsky,interpolate=True):
+    ells = np.arange(0,bin_edges.max()+1)
+    nls = get_planck_nls(ells)
+    cls = load_theory_dict(f'{root_name}_fiducial.txt',ells)
+    dcls = load_derivs(root_name,param_list,ells)
+    return band_fisher(param_list,bin_edges,specs,cls,nls,dcls,interpolate=interpolate)  * fsky
+
+
+def load_derivs(root_name,param_list,ells):
+    dcls = {}
+    for param in param_list:
+        dcls[param] = load_theory_dict(f'{root_name}_{param}_deriv.txt',ells)
+    return dcls
+
+
+def load_theory_dict(fname,ells):
+    cls = {}
+    ells,tt,ee,bb,te,kk = np.loadtxt(fname,unpack=True)
+    cls['TT'] = maps.interp(ells,tt)
+    cls['EE'] = maps.interp(ells,ee)
+    cls['BB'] = maps.interp(ells,bb)
+    cls['TE'] = maps.interp(ells,te)
+    cls['kk'] = maps.interp(ells,kk)
+    return cls
+
+
+def get_planck_nls(ells):
+    beams_T =  [33.,23.,14.,10.,7.,5.,5.]
+    uK_arcmins_T = [145.,149.,137.,65.,43.,66.,200.]
+    beams_P =  [14.,10.,7.,5.,5.]
+    uK_arcmins_P = [450.,103.,81.,134.,406.]
+    Ns_TT = np.asarray([(uK_arcmin*np.pi/180./60.)**2./maps.gauss_beam(ells,fwhm)**2. for uK_arcmin,fwhm in zip(uK_arcmins_T,beams_T)])
+    Ns_PP = np.asarray([(uK_arcmin*np.pi/180./60.)**2./maps.gauss_beam(ells,fwhm)**2. for uK_arcmin,fwhm in zip(uK_arcmins_P,beams_P)])
+    N_TT = 1./(1./Ns_TT).sum(axis=0)
+    N_PP = 1./(1./Ns_PP).sum(axis=0)
+    nls = {}
+    nls['TT'] = maps.interp(ells,N_TT)
+    nls['EE'] = maps.interp(ells,N_PP)
+    nls['BB'] = maps.interp(ells,N_PP)
+    return nls
+
 
 def gaussian_band_covariance(bin_edges,specs,cls_dict,nls_dict,interpolate=False):
 
@@ -99,12 +337,12 @@ def band_fisher(param_list,bin_edges,specs,cls_dict,nls_dict,derivs_dict,interpo
             Fisher[i,j] = np.einsum('ik,ik->',np.einsum('ij,ijk->ik',dcls1,cinv),dcls2)
             if i!=j: Fisher[j,i] = Fisher[i,j]
 
-    return stats.FisherMatrix(Fisher,param_list)
+    return FisherMatrix(Fisher,param_list)
 
 
 
 
-def get_jobs(param_file,exclude=None):
+def get_param_info(param_file,exclude=None):
     param_dat = np.genfromtxt(param_file,dtype=None,encoding='utf-8',delimiter=',')
     jobs = []
     jobs.append((None,None,'f'))
@@ -222,6 +460,8 @@ def set_camb_pars(params=None,de='ppf'):
     cs2,thetastar parametrization. (ctheta=cosmomc_theta)
     Any other parameterization has to be obtained by transforming the Fisher matrix.
     """
+    import camb
+    from camb import model
     if params is None: params = dict({})
     params = set_defaults(params)
     pars = camb.CAMBparams()
@@ -237,6 +477,8 @@ def set_camb_pars(params=None,de='ppf'):
 
 
 def get_s8(zs=[0.],params=None,nonlinear=False,kmax=5.2,**kwargs):
+    import camb
+    from camb import model
     zs = np.asarray(zs)
     zdiffs = np.diff(zs)
     if np.all(zdiffs>0):
@@ -263,6 +505,7 @@ def get_bao_rs_dV(zs,params=None,engine='camb',de='ppf'):
         results = camb.get_results(pars)
         retval = results.get_BAO(zs,pars)[:,0]
     elif engine=='class':
+        from classy import Class
         zs = np.asarray(zs)
         cosmo = Class()
         params['output'] = ''
@@ -290,7 +533,7 @@ def get_bao_fisher_rs_dV_diagonal(param_list,deriv_theory,fiducial_theory,sigma_
             Fz = (rsdV1*rsdV2/sigmas**2.).sum()
             Fisher[i,j] = Fz
             if i!=j: Fisher[j,i] = Fz
-    return stats.FisherMatrix(Fisher,param_list)
+    return FisherMatrix(Fisher,param_list)
 
 def load_bao_experiment_rs_dV_diagonal(exp_name,data_path,boss_include=['6df','mgs','lowz','cmass']):
     if exp_name=='desi':
@@ -324,6 +567,7 @@ def get_cls(params=None,lmax=3000,accurate=False,engine='camb',de='ppf',nonlinea
         return load_theory(pars,lpad=lmax+2)
         
     elif engine=='class':
+        from classy import Class
         cosmo = Class()
         params['output'] = 'lCl,tCl,pCl'
         params['lensing'] = 'yes'
@@ -399,6 +643,8 @@ def load_theory(pars,lpad=9000):
     All ell and 2pi factors are stripped off.
     '''
 
+    import camb
+    from camb import model
     uSuffix = "unlensed_total"
     lSuffix = "total"
 
@@ -427,3 +673,67 @@ def load_theory(pars,lpad=9000):
 
 
 
+
+def get_binner(bin_edges,interpolate):
+    if interpolate:
+        cents = (bin_edges[1:] + bin_edges[:-1])/2.
+        bin = lambda x: x(cents)
+    else:
+        binner = stats.bin1D(bin_edges)
+        ells = np.arange(bin_edges[0],bin_edges[-1]+1,1)
+        bin = lambda x: binner.bin(ells,x(ells))[1]
+        cents = binner.cents
+    return cents, bin
+
+
+# COPIED FROM ACTSIMS
+def pretty_info(info):
+    name = info['package'] if info['package'] is not None else info['path']
+    pstr = f'\n{name}'
+    pstr = pstr + '\n'+''.join(["=" for x in range(len(name))])
+    for key in info.keys():
+        if key=='package': continue
+        pstr = pstr + '\n' + f'\t{key:<10}{str(info[key]):<40}'
+    return pstr
+
+# COPIED FROM ACTSIMS
+def get_info(package=None,path=None,validate=True):
+    import git
+    import importlib
+    info = {}
+    if package is None:
+        assert path is not None, "One of package or path must be specified."
+        path = os.path.dirname(path)
+        version = None
+    else:
+        mod = importlib.import_module(package)
+        try:
+            version = mod.__version__
+        except AttributeError:
+            version = None
+        path = mod.__file__
+        path = os.path.dirname(path)
+    info['package'] = package
+    info['path'] = path
+    info['version'] = version
+    try:
+        repo = git.Repo(path,search_parent_directories=True)
+        is_git = True
+    except git.exc.InvalidGitRepositoryError:
+        is_git = False
+    info['is_git'] = is_git
+    if is_git:
+        chash = str(repo.head.commit)
+        untracked = len(repo.untracked_files)>0
+        changes = len(repo.index.diff(None))>0
+        branch = str(repo.active_branch)
+        info['hash'] = chash
+        info['untracked'] = untracked
+        info['changes'] = changes
+        info['branch'] = branch
+    else:
+        if validate:
+            assert version is not None
+            assert 'site-packages' in path
+    return info
+    

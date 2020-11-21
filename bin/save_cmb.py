@@ -20,7 +20,7 @@ args = parser.parse_args()
 lens_exclude = args.exclude_in_lensing.split(',')
 out_name = f"{args.output}{'_linear' if args.linear else '_nonlinear'}{'_accurate' if args.accurate else ''}{'_lensed' if args.lensed else '_unlensed'}"
 param_dat = np.genfromtxt(args.param_file,dtype=None,encoding='utf-8',delimiter=',')
-jobs,fids = pyfisher.get_jobs(args.param_file,exclude=None)
+jobs,fids = pyfisher.get_param_info(args.param_file,exclude=None)
 njobs = len(jobs)
 comm,rank,my_tasks = mpi.distribute(njobs)
 

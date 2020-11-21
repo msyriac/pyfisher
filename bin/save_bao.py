@@ -16,9 +16,13 @@ required_args.add_argument("-o","--output",type=str,help="Output root",required=
 required_args.add_argument("-p","--param-file",type=str,help="Parameter file",required=True)
 args = parser.parse_args()
 
+
+output_root = pyfisher.prepare_output(args,"save_bao.py BAO Fisher Matrix run")
+sys.exit()
+
 exclude = args.exclude.split(',')
 zs,sig_pers = pyfisher.load_bao_experiment_rs_dV_diagonal(args.exp_name,args.input_path,boss_include=args.boss_include.split(','))
-jobs,fids = pyfisher.get_jobs(args.param_file,exclude)
+jobs,fids = pyfisher.get_param_info(args.param_file,exclude)
 njobs = len(jobs)
 comm,rank,my_tasks = mpi.distribute(njobs)
 
@@ -37,16 +41,16 @@ for task in my_tasks:
     retval = pyfisher.get_bao_rs_dV(zs,params=pparams,engine='camb',de='ppf')
 
     if param is None:
-        fname = f'{args.output}_bao_fiducial.txt'
+        fname = f'{output_root}_bao_fiducial.txt'
     else:
-        fname = f'{args.output}_bao_{param}_{ptype}.txt'
+        fname = f'{output_root}_bao_{param}_{ptype}.txt'
     hstr = ','.join([param,str(val)]) if param is not None else ""
     np.savetxt(fname,retval,header=hstr)
 
 if rank==0:
 
     def read(param,ud):
-        filename = f'{args.output}_bao_{param}_{ud}.txt'
+        filename = f'{output_root}_bao_{param}_{ud}.txt'
         with open(filename,'r') as f:
             header = f.readline().strip()
             assert header[0]=="#"
@@ -54,7 +58,7 @@ if rank==0:
         data = np.loadtxt(filename)
         return oparam.strip(),float(val),data
 
-    fiducial_theory = np.loadtxt(f'{args.output}_bao_fiducial.txt')
+    fiducial_theory = np.loadtxt(f'{output_root}_bao_fiducial.txt')
     deriv_theory = {}
     for param in fids.keys():
         uparam,uval,udata = read(param,'u')
@@ -62,5 +66,4 @@ if rank==0:
         assert param==uparam==dparam
         deriv_theory[param] = (udata-ddata) / (uval-dval)
     Fmat = pyfisher.get_bao_fisher_rs_dV_diagonal(list(fids.keys()),deriv_theory,fiducial_theory,sig_pers)
-    stats.write_fisher(f'{args.output}_bao_fisher.txt',Fmat,delim=',')
-    print(Fmat)
+    stats.write_fisher(f'{output_root}_bao_fisher.txt',Fmat,delim=',')
