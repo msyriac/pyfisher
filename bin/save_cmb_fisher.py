@@ -15,8 +15,7 @@ args = parser.parse_args()
 out_name = pyfisher.prepare_output(args,"save_cmb_fisher.py Planck CMB Fishers run")
 
 param_file = f'{args.input}/params.txt'
-param_dat = np.genfromtxt(param_file,dtype=None,encoding='utf-8',delimiter=',')
-_,fids = pyfisher.get_param_info(args.param_file,exclude=None)
+_,fids = pyfisher.get_param_info(param_file,exclude=None)
 
 param_list = list(fids.keys())
 F1 = pyfisher.get_planck_cmb_fisher(param_list,np.arange(2,31),['TT'],args.input,fsky=1)

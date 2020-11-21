@@ -39,7 +39,13 @@ def get_saved_fisher(name,fsky=None,root_name='v20201120'):
         assert fsky is None
         return read_fisher(f'{os.path.realpath(__file__)}/data/{root_name}/{root_name}_boss_bao_fisher.txt',delim=',')
 
-#def get_lensing_fisher(nls,fsky=None,root_name='v20201120'):
+def get_lensing_fisher(nls,fsky=None,root_name='v20201120'):
+    param_file = f'{os.path.realpath(__file__)}/data/{root_name}/params.txt'
+    param_dat = np.genfromtxt(param_file,dtype=None,encoding='utf-8',delimiter=',')
+    _,fids = get_param_info(args.param_file,exclude=None)
+
+    param_list = list(fids.keys())
+    F1 = pyfisher.get_planck_cmb_fisher(param_list,np.arange(2,31),['TT'],args.input,fsky=1)
 
 
 
