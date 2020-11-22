@@ -1,8 +1,9 @@
 from __future__ import print_function
-from orphics import maps,io,cosmology,stats,lensing
 import numpy as np
 import os,sys
 import pyfisher
+from pyfisher import mpi
+
 
 import argparse
 # Parse command line
@@ -25,7 +26,7 @@ fids = pyfisher.get_fiducials()
 bao = pyfisher.get_saved_fisher('boss_bao')
 
 # Load a pre-calculated CMB lensing noise curve
-ells,nls = lensing.get_nl(exp)
+ells,nls = pyfisher.get_lensing_nl(exp)
 # Calculate a CMB lensing Fisher
 bin_edges = np.arange(Lmin,Lmax)
 lens = pyfisher.get_lensing_fisher(bin_edges,ells,nls,fsky)
