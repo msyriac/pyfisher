@@ -37,4 +37,4 @@ for task in my_tasks:
     p1,p0 = np.polyfit(vals, s8s, 1)
     pl.add(vals,p0+p1*vals,ls='--')
     pl.done(f'{output_root}s8s_{param}.png')
-    np.savetxt(f'{output_root}_fitderiv_s8_wrt_{param}.txt')
+    np.savetxt(f'{output_root}_fitderiv_s8_wrt_{param}.txt',np.asarray([p1]))
