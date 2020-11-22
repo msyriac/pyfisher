@@ -9,15 +9,35 @@ import datetime
 
 data_dir = f'{os.path.dirname(os.path.realpath(__file__))}/data/'
 
-def contour_plot(fisher,fiducials,fname,name=''):
+latex_mapping = {
+    'omch2': '$\\Omega_c h^2$',
+    'ombh2': '$\\Omega_b h^2$',
+    'H0': '$H_0$',
+    'ns': '$n_s$',
+    'As': '$A_s$',
+    'mnu': '$\\Sigma m_{\\nu}$',
+    'w0': '$w_0$',
+    'wa': '$w_a$',
+    'tau':'$\\tau$',
+    'nnu':'$N_{\\rm eff}$',
+    'ok':'$\\Omega_k$',
+    'r':'$r$',
+    'cs2':'$c_s^2$',
+    'thetastar': '$\\theta^*$',
+    'ctheta': '$\\theta_{\\rm COSMOMC}$',
+    's8': '$\\sigma_8$',
+    'om': '$\\Omega_m$',
+}
+
+def contour_plot(fisher,fiducials,fname,name='',add_marker=False):
     from chainconsumer import ChainConsumer
     mean = [fiducials[key] for key in fisher.params]
     cov = np.linalg.inv(fisher.values)
-    parameters = fisher.params
+    parameters = [latex_mapping[x] for x in fisher.params]
 
     c = ChainConsumer()
-    c.add_covariance(mean, cov, parameters=parameters, name=name)
-    c.add_marker(mean, parameters=parameters, marker_style="*", marker_size=100, color="r",name='')
+    c.add_covariance(mean, cov, parameters=parameters, name=name,shade=False)
+    if add_marker: c.add_marker(mean, parameters=parameters, marker_style="*", marker_size=100, color="r",name='')
     c.configure(usetex=False, serif=False,sigma2d=True,sigmas=[1])
     fig = c.plotter.plot()
     fig.set_size_inches(3 + fig.get_size_inches()) 
@@ -462,21 +482,21 @@ def map_params(params,engine='camb'):
 
 def set_defaults(params):
     ds = {
-        'omch2': 0.1203058
-        ,'ombh2': 0.02219218
-        ,'H0': 67.02393
-        ,'ns': 0.9625356
-        ,'As': 2.15086031154146e-9
-        ,'mnu': 0.06
-        ,'w0': -1.0
-        ,'wa': 0.0
-        ,'tau':0.06574325
-        ,'nnu':3.046
-        ,'ok':0
-        ,'r':0
-        ,'cs2':1.0
-        ,'thetastar': None
-        ,'ctheta': None
+        'omch2': 0.1203058,
+        'ombh2': 0.02219218,
+        'H0': 67.02393,
+        'ns': 0.9625356,
+        'As': 2.15086031154146e-9,
+        'mnu': 0.06,
+        'w0': -1.0,
+        'wa': 0.0,
+        'tau':0.06574325,
+        'nnu':3.046,
+        'ok':0,
+        'r':0,
+        'cs2':1.0,
+        'thetastar': None,
+        'ctheta': None
     }
     for key in ds.keys():
         if key not in params.keys(): params[key] = ds[key]
@@ -636,17 +656,24 @@ def get_trans_deriv(iparam,oparam,fiducials,deriv_path):
     elif iparam=='ombh2' and oparam=='H0':
         return 2. * h * ob / 100.
     elif oparam=='s8':
-        if iparam in ['As','ns','omch2','ombh2','ok','mnu','w0','wa','nnu','ctheta','thetastar','cs2']:
-            val = np.loadtxt(derivpath+f"_fitderiv_s8_wrt_{iparam}.txt")
+        if iparam in ['As','ns','omch2','ombh2','ok','mnu','w0','wa','nnu','ctheta','thetastar','cs2','H0']:
+            try:
+                val = np.loadtxt(deriv_path+f"_fitderiv_s8_wrt_{iparam}.txt")
+            except:
+                print("Couldn't find ", deriv_path+f"_fitderiv_s8_wrt_{iparam}.txt")
+                return np.asarray([0])
             assert val.size==1
             return 1./val.ravel()[0]
         elif iparam in ['tau','r']:
             return 0.
         else:
+            print(iparam,oparam)
             raise ValueError
+    else:
+        return 0.
     
 
-def reparameterize(Fmat,iparams,oparams,fiducials,deriv_path):
+def reparameterize(Fmat,oparams,fiducials,deriv_path):
     """
     Re-parameterize a Fisher matrix.
     iparams must only contain CAMB primitives
@@ -656,6 +683,7 @@ def reparameterize(Fmat,iparams,oparams,fiducials,deriv_path):
     om
     """
 
+    iparams = Fmat.params
     onum = len(oparams)
     inum = len(iparams)
     
@@ -663,13 +691,11 @@ def reparameterize(Fmat,iparams,oparams,fiducials,deriv_path):
 
     for i in range(inum):
         for j in range(onum):
-            M[i,j] = get_trans_deriv(iparams[i],oparams[j],fiducials,deriv_path)
-    print(M)
-    return np.dot(np.dot(M,Fmat),M.T)
+            val = get_trans_deriv(iparams[i],oparams[j],fiducials,deriv_path)
+            M[i,j] = val
+    interm = np.dot(M.T,Fmat)
+    return FisherMatrix(np.dot(interm,M),oparams)
 
-
-#def s8(params):
-    
 
 def load_theory(pars,lpad=9000):
     '''
