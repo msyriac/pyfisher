@@ -27,6 +27,7 @@ latex_mapping = {
     'ctheta': '$\\theta_{\\rm COSMOMC}$',
     's8': '$\\sigma_8$',
     'om': '$\\Omega_m$',
+    's8om0.25': '$\\sigma_8 \\Omega_m^{0.25}$',
 }
 
 def contour_plot(fisher,fiducials,fname,name='',add_marker=False):
@@ -191,7 +192,10 @@ class FisherMatrix(DataFrame):
             raise ValueError # self.params should not already exist
         except:
             pass
-        self.params = param_list
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self.params = param_list
             
         cols = self.columns.tolist()
         ind = self.index.tolist()
@@ -634,13 +638,50 @@ def get_cls(params=None,lmax=3000,accurate=False,engine='camb',de='ppf',nonlinea
     return retval
 
 
-def get_trans_deriv(iparam,oparam,fiducials,deriv_path):
+def deriv_s8_wrt_param(iparam,deriv_root):
+    if iparam in ['As','ns','omch2','ombh2','ok','mnu','w0','wa','nnu','ctheta','thetastar','cs2','H0']:
+        try:
+            val = np.loadtxt(f"{data_dir}{deriv_root}/{deriv_root}_fitderiv_s8_wrt_{iparam}.txt")
+        except:
+            print("Couldn't find ", f"{data_dir}{deriv_root}/{deriv_root}_fitderiv_s8_wrt_{iparam}.txt")
+            raise ValueError
+        assert val.size==1
+        return val.ravel()[0]
+    elif iparam in ['tau','r']:
+        return 0.
+    else:
+        print("s8",iparam)
+        raise ValueError
+
+def deriv_om_wrt_param(iparam,fiducials,verbose=True):
+    if iparam=='om': 
+        return 1
+    fs = fiducials
+    h = fs['H0']/100.
+    oc = fs['omch2'] / h**2.
+    ob = fs['ombh2'] / h**2.
+    om = oc+ob
+    s8 = fs['s8']
+    if iparam=='omch2':
+        return 1./(h**2.)
+    elif iparam=='ombh2':
+        return 1./(h**2.)
+    elif iparam=='H0':
+        return 0
+    else:
+        if verbose: print(f'Setting om w.r.t. {iparam} to zero.')
+        return 0
+    
+
+def get_itrans_deriv(oparam,iparam,fiducials,deriv_root,verbose=True):
     """
-    The matrix is input/output
+    The matrix is output/input
 
     So it has elements like
 
-    dAs/ds8, d(omc*h**2)/dom, d(omc*h**2)/ds8
+    ds8/dAs, dom/d(omc*h**2), ds8/d(omc*h**2)
+
+    This typically has to be inverted.
     """
 
     if iparam==oparam: 
@@ -650,33 +691,33 @@ def get_trans_deriv(iparam,oparam,fiducials,deriv_path):
     h = fs['H0']/100.
     oc = fs['omch2'] / h**2.
     ob = fs['ombh2'] / h**2.
-    if iparam=='omch2' and oparam=='om':
-        return h**2.
-    elif iparam=='ombh2' and oparam=='om':
-        return h**2.
-    elif iparam=='omch2' and oparam=='H0':
+    om = oc+ob
+    s8 = fs['s8']
+    if oparam=='om':
+        return deriv_om_wrt_param(iparam,fiducials,verbose=verbose)
+    elif oparam=='omch2' and iparam=='om':
+        return 1./deriv_om_wrt_param(oparam,fiducials,verbose=verbose)
+    elif oparam=='ombh2' and iparam=='om':
+        return 1./deriv_om_wrt_param(oparam,fiducials,verbose=verbose)
+    elif oparam=='omch2' and iparam=='H0':
         return 2. * h * oc / 100.
-    elif iparam=='ombh2' and oparam=='H0':
+    elif oparam=='ombh2' and iparam=='H0':
         return 2. * h * ob / 100.
+    elif oparam=='H0' and iparam=='ombh2':
+        return 1./(2. * h * ob / 100.)
+    elif oparam=='H0' and iparam=='omch2':
+        return 1./(2. * h * oc / 100.)
     elif oparam=='s8':
-        if iparam in ['As','ns','omch2','ombh2','ok','mnu','w0','wa','nnu','ctheta','thetastar','cs2','H0']:
-            try:
-                val = np.loadtxt(deriv_path+f"_fitderiv_s8_wrt_{iparam}.txt")
-            except:
-                print("Couldn't find ", deriv_path+f"_fitderiv_s8_wrt_{iparam}.txt")
-                raise ValueError
-            assert val.size==1
-            return 1./val.ravel()[0]
-        elif iparam in ['tau','r']:
-            return 0.
-        else:
-            print(iparam,oparam)
-            raise ValueError
+        return deriv_s8_wrt_param(iparam,deriv_root)
+    elif oparam[:4]=='s8om':
+        ind = float(oparam[4:])
+        return ((om**ind) * deriv_s8_wrt_param(iparam,deriv_root)) + (s8 * ind * (om**(ind-1.)) * deriv_om_wrt_param(iparam,fiducials,verbose=verbose))
     else:
+        if verbose: print(f'Setting {oparam} w.r.t. {iparam} to zero.')
         return 0.
     
 
-def reparameterize(Fmat,oparams,fiducials,deriv_path):
+def reparameterize(Fmat,oparams,fiducials,deriv_root='v20201120_s8_derivs',verbose=True):
     """
     Re-parameterize a Fisher matrix.
     iparams must only contain CAMB primitives
@@ -685,17 +726,15 @@ def reparameterize(Fmat,oparams,fiducials,deriv_path):
     s8
     om
     """
-
     iparams = Fmat.params
     onum = len(oparams)
     inum = len(iparams)
-    
-    M = np.zeros((inum,onum))
-
-    for i in range(inum):
-        for j in range(onum):
-            val = get_trans_deriv(iparams[i],oparams[j],fiducials,deriv_path)
-            M[i,j] = val
+    iM = np.zeros((onum,inum))
+    for i in range(onum):
+        for j in range(inum):
+            val = get_itrans_deriv(oparams[i],iparams[j],fiducials,deriv_root,verbose=verbose)
+            iM[i,j] = val
+    M = np.linalg.pinv(iM)
     interm = np.dot(M.T,Fmat)
     return FisherMatrix(np.dot(interm,M),oparams)
 

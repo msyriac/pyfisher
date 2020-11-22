@@ -1,6 +1,10 @@
 # pyfisher 2
 
 pyfisher is a python package for calculating Fisher matrices and for forecasting parameter uncertainties for cosmological surveys.
+Version 2 is a total revamp, so if you're used to what this software looked like before November 2020, you should
+switch to the `legacy` branch. While the new version does not (yet) provide an interface for CMB lensing noise curves with iterative
+delensing like the old one did, it has a simplified API, lots of pre-calculated Fishers, and a tool to reparametrize into a $\sigma_8$ parameterization.
+
 
 ## Installation
 
@@ -25,29 +29,4 @@ from anywhere on your system.
 
 ## Basic Usage
 
-1. Edit `input/params.ini`. It is documented. You can include or exclude BAO by changing `otherFishers`, and the details of lensing reconstruction by changing the `lensing` section. There are a whole bunch of sections for different experiment configurations too.
-2. See how `tests/testFisher.py` uses this ini file. Inside the root repo directory, run
-``
-python tests/testFisher.py <experiment section name> <lensing section name>
-``
-For example
-``
-python tests/testFisher.py S4-5m lensing
-``
-which will tell you what the mnu constraint and lensing S/N is. You can adapt this script to, for example, override one of the ini configurations and make plots of constraints and S/N varying that configuration.
-
-## Advanced Usage
-
-
-### Make derivatives
-
-Edit `input/makeDefaults.ini` and specify a fiducial cosmology, derivative step sizes and a prefix under which to save the derivatives to  `output/`. Run with
-
-`python bin/makeDerivs.py`
-
-### Re-make Planck or BAO Fisher matrices.
-
-Edit `input/fisherDebug.ini` and run
-```
-python bin/driver.py input/fisherDebug.ini
-```
+See and run `python bin/test_lensing.py planck` to reproduce Planck constraints and get a feel for how to use this package.
