@@ -43,7 +43,7 @@ def contour_plot(fisher,fiducials,fname,name='',add_marker=False):
     fig.set_size_inches(3 + fig.get_size_inches()) 
     fig.savefig(fname)
 
-def prepare_output(args, message=""):
+def prepare_output(args, message="",allow_changes=False):
     output_path = args.output
     assert output_path.strip()[-1]!='/'
     io.mkdir(f'{output_path}')
@@ -55,7 +55,7 @@ def prepare_output(args, message=""):
         for arg in vars(args):
             f.write(f'{arg} :  {getattr(args, arg)}\n')
         info = get_info(path=os.path.realpath(__file__))
-        assert not(info['changes']), "Git must not have changes to run this script."
+        if not(allow_changes): assert not(info['changes']), "Git must not have changes to run this script."
         f.write(pretty_info(info))
     output_root = f'{output_path}/{rname}'
     return output_root
@@ -393,10 +393,10 @@ def band_fisher(param_list,bin_edges,specs,cls_dict,nls_dict,derivs_dict,interpo
 
 
 
-def get_param_info(param_file,exclude=None):
+def get_param_info(param_file,exclude=None,get_range=False):
     param_dat = np.genfromtxt(param_file,dtype=None,encoding='utf-8',delimiter=',')
     jobs = []
-    jobs.append((None,None,'f'))
+    if not(get_range): jobs.append((None,None,'f'))
     fids = {}
     for p in param_dat:
         param = p[0]
@@ -412,8 +412,11 @@ def get_param_info(param_file,exclude=None):
         else:
             step = float(pstr)
         assert step>0
-        jobs.append((param,fid+step,'u'))
-        jobs.append((param,fid-step,'d'))
+        if get_range:
+            jobs.append((param,fid-step,fid+step))
+        else:
+            jobs.append((param,fid+step,'u'))
+            jobs.append((param,fid-step,'d'))
     return jobs,fids
 
 def _camb_to_class(params):
@@ -661,7 +664,7 @@ def get_trans_deriv(iparam,oparam,fiducials,deriv_path):
                 val = np.loadtxt(deriv_path+f"_fitderiv_s8_wrt_{iparam}.txt")
             except:
                 print("Couldn't find ", deriv_path+f"_fitderiv_s8_wrt_{iparam}.txt")
-                return np.asarray([0])
+                raise ValueError
             assert val.size==1
             return 1./val.ravel()[0]
         elif iparam in ['tau','r']:
