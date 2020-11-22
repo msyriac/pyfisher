@@ -32,7 +32,7 @@ latex_mapping = {
 
 def get_lensing_nl(exp):
     exp = exp.strip().lower()
-    froot = os.path.dirname(__file__)+"/data/"
+    froot = os.path.dirname(__file__)+"/data/lensing_nl/"
     if exp=='planck':
         return np.loadtxt(f'{froot}planck_2018_mv_nlkk.dat',usecols=[0,1],unpack=True)
     elif exp=='so_goal':
