@@ -3,8 +3,7 @@
 pyfisher is a python package for calculating Fisher matrices and for forecasting parameter uncertainties for cosmological surveys.
 
 ```diff
-- Version 2 is a total revamp, so if you're used to what this software looked like before November 2020, you should
-switch to the `legacy` branch. 
+- Version 2 is a total revamp, so if you're used to what this software looked like before November 2020, you should switch to the `legacy` branch. 
 ```
 
 While the new version does not (yet) provide an interface for CMB lensing noise curves with iterative
