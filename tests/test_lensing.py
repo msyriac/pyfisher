@@ -46,9 +46,9 @@ def run_lensing_demo(Lmin,Lmax,exp,fsky,test=False):
     print("Planck lens + BAO (s8, om, H0 parameterization)")
     for p in ['s8','om','H0']:
         print(f'{p} = {fids[p]:.03f}+-{sigmas[p]:.03f}')
-    if test: 
-        assert np.isclose(sigmas['s8'],0.01539,rtol=1e-3)
-        assert np.isclose(sigmas['om'],0.01903,rtol=1e-3)
+    if test:
+        assert np.isclose(sigmas['s8'],0.01806,rtol=1e-3)
+        assert np.isclose(sigmas['om'],0.02242,rtol=1e-3)
 
     # Planck lens alone (s8om^0.25, H0 parameterization)
     fids['s8om0.25'] = fids['s8'] * fids['om']**0.25
@@ -60,7 +60,7 @@ def run_lensing_demo(Lmin,Lmax,exp,fsky,test=False):
     for p in ['s8om0.25']:
         print(f'{p} = {fids[p]:.03f}+-{sigmas[p]:.03f}')
     if test:
-        assert np.isclose(sigmas['s8om0.25'],0.01516,rtol=1e-3)
+        assert np.isclose(sigmas['s8om0.25'],0.01879,rtol=1e-3)
 
 
     # Planck lens + BAO + CMB (mnu)
@@ -74,7 +74,7 @@ def run_lensing_demo(Lmin,Lmax,exp,fsky,test=False):
     for p in ['mnu']:
         print(f'{p} = {fids[p]:.03f}+-{sigmas[p]:.03f}')
     if test:
-        assert np.isclose(sigmas['mnu'],0.0743,rtol=1e-3)
+        assert np.isclose(sigmas['mnu'],0.0797,rtol=1e-3)
     else:
         pyfisher.contour_plot(F,fids,'contour.png',name=None)
 
