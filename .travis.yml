@@ -1,0 +1,42 @@
+language: python
+
+python:
+  - 3.8
+  - 3.7
+  - 3.6
+      
+install:
+  - pip install -U tox-travis
+  - mkdir -p gfortran-symlinks
+  - ln -s /usr/bin/gfortran-7 gfortran-symlinks/gfortran
+  - export PATH=$PWD/gfortran-symlinks:$PATH
+  - FC=gfortran-7 pip install camb -I
+  - pip install -U pytest-cov
+  - pip install -U coveralls
+
+after_success:
+  - coverage run --source=pyfisher -m pytest tests/
+  - coveralls
+  
+script: tox
+deploy:
+  provider: pypi
+  distributions: sdist bdist_wheel
+  username: __token__
+  password:
+    secure: ZwjUKpUNV/ON41uRlqvK1vkFOGJhG6Wl27/gBhhwdvh4+n0QR8oRfY7618OeI6Jy7GTukm1/rCIRpE6h/HwVOChI4HYeKcBpq+276tKks3gjrOgs7kXvmULNjrJiUcdIDQv9P7g1M5SkU2mJPkUQgENwuo8fc9QPdyhBAtCvTvMcyLmHyBjjKpv3eyqfkOMwkLaKhCXsMD98VqD151Q4g34JOnX3/zTwVYcpk8ofufQOkCldrCJgCmGzjNIyq0bnAMdahkSXScyxR5tuMM/4F+qAmsT5HCUl9CXdESclcJ4YvhUvS/QRx9NjjAhRRQvIT8YflX6s3OlBb55VtlxSoIjjvGKiw8QxsYdWbP10c1miBbTSWrGGqVAURufCnK/ioRS2v60SUCiGMCknhtYfK6Fqy6kjorkAw0QuCqMUPpgPXve2Ip86oX2VZGIZXT+S0UsHezLjN+J6wT7/Lla0aY52rZLS32acf9JhyjGekbJTjcaXoJgA3ylKw4mXIZ+cV4++wqaVBNTUdpmTqBhdFHmOfzUQHgdyL/zqlGZyv/BTW5nStd2TvX6UsHayw/j5xJ0T86XC5WjwdcHJuPuh4gG1+ms7hPHYxj9HzMCfj5xiLnTKxt0iJCdiaffBmLlYDY6kl0vo7Tn3vS0wxoXV210A7AKtr6g1FfnXmYVLrrE=
+  on:
+    tags: true
+    repo: msyriac/pyfisher
+    python: 3.8
+
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - gfortran-7
+
+env:
+  - FC=gfortran-7

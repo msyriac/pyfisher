@@ -1,6 +1,6 @@
 from __future__ import print_function
 import numpy as np
-import os,sys
+import os,sys,re
 import warnings
 from pandas import DataFrame
 import pandas as pd
@@ -894,7 +894,10 @@ def get_info(package=None,path=None,validate=True):
     return info
     
 
-
+def validate_map_type(mapXYType):
+    assert not(re.search('[^TEB]', mapXYType)) and (len(mapXYType)==2), \
+      bcolors.FAIL+"\""+mapXYType+"\" is an invalid map type. XY must be a two" + \
+      " letter combination of T, E and B. e.g TT or TE."+bcolors.ENDC
 
 class TheorySpectra:
     '''
@@ -950,7 +953,7 @@ class TheorySpectra:
         # Implement ellnorm
 
         mapXYType = XYType.upper()
-        validateMapType(mapXYType)
+        validate_map_type(mapXYType)
 
 
         if not(fill_zero):
@@ -970,7 +973,7 @@ class TheorySpectra:
 
             
         mapXYType = XYType.upper()
-        validateMapType(mapXYType)
+        validate_map_type(mapXYType)
 
         if mapXYType=="ET": mapXYType="TE"
         ell = np.array(ell)
