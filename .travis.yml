@@ -1,21 +1,9 @@
 language: python
 
-jobs:
-  include:
-    - language: python
-      dist: xenial
-      python: "3.8"
-      sudo: required
-
-    - language: python
-      dist: xenial
-      python: "3.7"
-      sudo: required
-
-    - language: python
-      dist: xenial
-      python: "3.6"
-      sudo: required
+python:
+  - 3.8
+  - 3.7
+  - 3.6
       
 install: pip install -U tox-travis
 script: tox
@@ -30,7 +18,9 @@ deploy:
     repo: msyriac/pyfisher
     python: 3.8
 
+
 addons:
+  apt:
   apt_packages:
-  - gfortran
-    
+    - gfortran-6
+            

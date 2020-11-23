@@ -14,7 +14,6 @@ requirements = ['numpy',
                 'matplotlib',
                 'scipy',
                 'pandas',
-                'camb',
                 'chainconsumer']
 
 setup_requirements = ['pytest-runner', ]
