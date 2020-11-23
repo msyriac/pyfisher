@@ -10,10 +10,7 @@ delensing like the old one did, it has a simplified API, lots of pre-calculated 
 
 ## Installation
 
-You will need to install a dependency called `orphics` that is not available on pip, conda, etc.
-https://github.com/msyriac/orphics
-
-The installation procedure for that dependency is the same as for this package. Repeat the following for each of `orphics` and `pyfisher` separately.
+Install in two steps:
 
 1. Git clone the repository
 2. `cd` into the repository and run `pip install -e . --user`.

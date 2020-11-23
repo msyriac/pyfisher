@@ -1,11 +1,11 @@
 from __future__ import print_function
-from orphics import cosmology,stats,maps,io
 import numpy as np
 import os,sys
 import warnings
 from pandas import DataFrame
 import pandas as pd
 import datetime
+from scipy.interpolate import interp1d
 
 data_dir = f'{os.path.dirname(os.path.realpath(__file__))}/data/'
 
@@ -30,6 +30,68 @@ latex_mapping = {
     's8om0.25': '$\\sigma_8 \\Omega_m^{0.25}$',
 }
 
+def get_lensing_nl(exp):
+    exp = exp.strip().lower()
+    froot = os.path.dirname(__file__)+"/data/lensing_nl/"
+    if exp=='planck':
+        return np.loadtxt(f'{froot}planck_2018_mv_nlkk.dat',usecols=[0,1],unpack=True)
+    elif exp=='so_goal':
+        return np.loadtxt(f'{froot}so_v3_1_deproj0_goal_fsky0p4_it.dat',usecols=[0,7],unpack=True)
+    elif exp=='s4':
+        return np.loadtxt(f'{froot}s4_noise.dat',usecols=[0,7],unpack=True)
+
+def bin1d(bin_edges,ix,iy,stat=np.nanmean):
+    numbins = len(bin_edges)-1
+    cents = (bin_edges[:-1]+bin_edges[1:])/2.
+    bin_edges_min = bin_edges.min()
+    bin_edges_max = bin_edges.max()
+    x = ix.copy()
+    y = iy.copy()
+    # this just prevents an annoying warning (which is otherwise informative) everytime
+    # all the values outside the bin_edges are nans
+    y[x<bin_edges_min] = 0
+    y[x>bin_edges_max] = 0
+    # pretty sure this treats nans in y correctly, but should double-check!
+    bin_means = binnedstat(x,y,bins=bin_edges,statistic=stat)[0]
+    return cents,bin_means
+
+
+def mkdir(dirpath,comm=None):
+    if comm is None:
+        from . import mpi
+        comm = mpi.MPI.COMM_WORLD
+    exists = os.path.exists(dirpath)
+    comm.Barrier()
+    if comm.Get_rank()==0: 
+        if not (exists):
+            os.makedirs(dirpath)
+    return exists
+
+def interp(x,y,bounds_error=False,fill_value=0.,**kwargs):
+    return interp1d(x,y,bounds_error=bounds_error,fill_value=fill_value,**kwargs)
+
+def gauss_beam(ell,fwhm):
+    tht_fwhm = np.deg2rad(fwhm / 60.)
+    return np.exp(-(tht_fwhm**2.)*(ell**2.) / (16.*np.log(2.)))
+
+
+def prepare_output(args, message="",allow_changes=False):
+    output_path = args.output
+    assert output_path.strip()[-1]!='/'
+    mkdir(f'{output_path}')
+    rname = os.path.basename(f'{output_path}')
+    with open(f'{output_path}/info.log','w') as f:
+        f.write(f'{message}\n')
+        now = datetime.datetime.now()
+        f.write(f'Current date and time : {now.strftime("%Y-%m-%d %H:%M:%S")}\n')
+        for arg in vars(args):
+            f.write(f'{arg} :  {getattr(args, arg)}\n')
+        info = get_info(path=os.path.realpath(__file__))
+        if not(allow_changes): assert not(info['changes']), "Git must not have changes to run this script."
+        f.write(pretty_info(info))
+    output_root = f'{output_path}/{rname}'
+    return output_root
+
 def contour_plot(fisher,fiducials,fname,name='',add_marker=False):
     from chainconsumer import ChainConsumer
     mean = [fiducials[key] for key in fisher.params]
@@ -43,23 +105,6 @@ def contour_plot(fisher,fiducials,fname,name='',add_marker=False):
     fig = c.plotter.plot()
     fig.set_size_inches(3 + fig.get_size_inches()) 
     fig.savefig(fname)
-
-def prepare_output(args, message="",allow_changes=False):
-    output_path = args.output
-    assert output_path.strip()[-1]!='/'
-    io.mkdir(f'{output_path}')
-    rname = os.path.basename(f'{output_path}')
-    with open(f'{output_path}/info.log','w') as f:
-        f.write(f'{message}\n')
-        now = datetime.datetime.now()
-        f.write(f'Current date and time : {now.strftime("%Y-%m-%d %H:%M:%S")}\n')
-        for arg in vars(args):
-            f.write(f'{arg} :  {getattr(args, arg)}\n')
-        info = get_info(path=os.path.realpath(__file__))
-        if not(allow_changes): assert not(info['changes']), "Git must not have changes to run this script."
-        f.write(pretty_info(info))
-    output_root = f'{output_path}/{rname}'
-    return output_root
 
 
 def get_fiducials(root_name='v20201120'):
@@ -86,7 +131,7 @@ def get_lensing_fisher(bin_edges,ells,nls,fsky,root_name='v20201120',interpolate
     param_file = f'{data_dir}{root_name}_cmb_derivs/params.txt'
     _,fids = get_param_info(param_file,exclude=None)
     param_list = list(fids.keys())
-    nl_dict = {'kk':maps.interp(ells,nls,bounds_error=True)}
+    nl_dict = {'kk':interp(ells,nls,bounds_error=True)}
     cls = load_theory_dict(f'{data_dir}{root_name}_cmb_derivs/{root_name}_cmb_derivs_cmb_fiducial.txt',ells)
     dcls = load_derivs(f'{data_dir}{root_name}_cmb_derivs',param_list,ells)
     return band_fisher(param_list,bin_edges,['kk'],cls,nl_dict,dcls,interpolate=interpolate)
@@ -298,11 +343,11 @@ def load_derivs(root_name,param_list,ells):
 def load_theory_dict(fname,ells):
     cls = {}
     ells,tt,ee,bb,te,kk = np.loadtxt(fname,unpack=True)
-    cls['TT'] = maps.interp(ells,tt)
-    cls['EE'] = maps.interp(ells,ee)
-    cls['BB'] = maps.interp(ells,bb)
-    cls['TE'] = maps.interp(ells,te)
-    cls['kk'] = maps.interp(ells,kk)
+    cls['TT'] = interp(ells,tt)
+    cls['EE'] = interp(ells,ee)
+    cls['BB'] = interp(ells,bb)
+    cls['TE'] = interp(ells,te)
+    cls['kk'] = interp(ells,kk)
     return cls
 
 
@@ -311,14 +356,14 @@ def get_planck_nls(ells):
     uK_arcmins_T = [145.,149.,137.,65.,43.,66.,200.]
     beams_P =  [14.,10.,7.,5.,5.]
     uK_arcmins_P = [450.,103.,81.,134.,406.]
-    Ns_TT = np.asarray([(uK_arcmin*np.pi/180./60.)**2./maps.gauss_beam(ells,fwhm)**2. for uK_arcmin,fwhm in zip(uK_arcmins_T,beams_T)])
-    Ns_PP = np.asarray([(uK_arcmin*np.pi/180./60.)**2./maps.gauss_beam(ells,fwhm)**2. for uK_arcmin,fwhm in zip(uK_arcmins_P,beams_P)])
+    Ns_TT = np.asarray([(uK_arcmin*np.pi/180./60.)**2./gauss_beam(ells,fwhm)**2. for uK_arcmin,fwhm in zip(uK_arcmins_T,beams_T)])
+    Ns_PP = np.asarray([(uK_arcmin*np.pi/180./60.)**2./gauss_beam(ells,fwhm)**2. for uK_arcmin,fwhm in zip(uK_arcmins_P,beams_P)])
     N_TT = 1./(1./Ns_TT).sum(axis=0)
     N_PP = 1./(1./Ns_PP).sum(axis=0)
     nls = {}
-    nls['TT'] = maps.interp(ells,N_TT)
-    nls['EE'] = maps.interp(ells,N_PP)
-    nls['BB'] = maps.interp(ells,N_PP)
+    nls['TT'] = interp(ells,N_TT)
+    nls['EE'] = interp(ells,N_PP)
+    nls['BB'] = interp(ells,N_PP)
     return nls
 
 
@@ -326,6 +371,7 @@ def gaussian_band_covariance(bin_edges,specs,cls_dict,nls_dict,interpolate=False
 
     cents,bin = get_binner(bin_edges,interpolate)
     delta_ell = np.diff(bin_edges)
+    nbins = len(bin_edges) - 1
 
     def _symmz(cdict,ab):
         try:
@@ -334,11 +380,10 @@ def gaussian_band_covariance(bin_edges,specs,cls_dict,nls_dict,interpolate=False
             try:
                 return bin(cdict[ab[::-1]])
             except KeyError:
-                return cents*0
+                return np.zeros((nbins,))
             
     
     ncomps = len(specs)
-    nbins = len(bin_edges) - 1
     cov = np.zeros((nbins,ncomps,ncomps))
     for i in range(ncomps):
         for j in range(i,ncomps):
@@ -752,7 +797,7 @@ def load_theory(pars,lpad=9000):
     results = camb.get_results(pars)
     cmbmat = results.get_cmb_power_spectra(pars,lmax=lpad,spectra=['total','unlensed_total','lens_potential'],raw_cl=True,CMB_unit='muK')
 
-    theory = cosmology.TheorySpectra()
+    theory = TheorySpectra()
     for i,pol in enumerate(['TT','EE','BB','TE']):
         cls =cmbmat[lSuffix][:,i]
         ells = np.arange(0,len(cls),1)
@@ -776,14 +821,12 @@ def load_theory(pars,lpad=9000):
 
 
 def get_binner(bin_edges,interpolate):
+    cents = (bin_edges[1:] + bin_edges[:-1])/2.
     if interpolate:
-        cents = (bin_edges[1:] + bin_edges[:-1])/2.
         bin = lambda x: x(cents)
     else:
-        binner = stats.bin1D(bin_edges)
         ells = np.arange(bin_edges[0],bin_edges[-1]+1,1)
-        bin = lambda x: binner.bin(ells,x(ells))[1]
-        cents = binner.cents
+        bin = lambda x: bin1d(bin_ediges,ells,x(ells))[1]
     return cents, bin
 
 
@@ -837,4 +880,112 @@ def get_info(package=None,path=None,validate=True):
             assert version is not None
             assert 'site-packages' in path
     return info
+    
+
+
+
+class TheorySpectra:
+    '''
+    Essentially just an interpolator that takes a CAMB-like
+    set of discrete Cls and provides lensed and unlensed Cl functions
+    for use in integrals
+    '''
+    
+
+    def __init__(self):
+
+        self.always_unlensed = False
+        self.always_lensed = False
+        self._uCl={}
+        self._lCl={}
+        self._gCl = {}
+
+
+    def loadGenericCls(self,ells,Cls,keyName,lpad=9000,fill_zero=True):
+        if not(fill_zero):
+            fillval = Cls[ells<lpad][-1]
+            print(fillval)
+            print(ells[ells<lpad],Cls[ells<lpad])
+            self._gCl[keyName] = lambda x: np.piecewise(x, [x<=lpad,x>lpad], [lambda y: interp1d(ells[ells<lpad],Cls[ells<lpad],bounds_error=False,fill_value=0.)(y),lambda y: fillval*(lpad/y)**4.])
+            print(self._gCl[keyName](ells[ells<lpad]))
+
+        else:
+            fillval = 0.            
+            self._gCl[keyName] = interp1d(ells[ells<lpad],Cls[ells<lpad],bounds_error=False,fill_value=fillval)
+        
+
+        
+
+    def gCl(self,keyName,ell):
+
+        if len(keyName)==3:
+            # assume uTT, lTT, etc.
+            ultype = keyName[0].lower()
+            if ultype=="u":
+                return self.uCl(keyName[1:],ell)
+            elif ultype=="l":
+                return self.lCl(keyName[1:],ell)
+            else:
+                raise ValueError
+        
+        try:
+            return self._gCl[keyName](ell)
+        except:
+            return self._gCl[keyName[::-1]](ell)
+        
+    def loadCls(self,ell,Cl,XYType="TT",lensed=False,interporder="linear",lpad=9000,fill_zero=True):
+
+        # Implement ellnorm
+
+        mapXYType = XYType.upper()
+        validateMapType(mapXYType)
+
+
+        if not(fill_zero):
+            fillval = Cl[ell<lpad][-1]
+            f = lambda x: np.piecewise(x, [x<=lpad,x>lpad], [lambda y: interp1d(ell[ell<lpad],Cl[ell<lpad],bounds_error=False,fill_value=0.)(y),lambda y: fillval*(lpad/y)**4.])
+
+        else:
+            fillval = 0.            
+            f = interp1d(ell[ell<lpad],Cl[ell<lpad],bounds_error=False,fill_value=fillval)
+                    
+        if lensed:
+            self._lCl[XYType]=f
+        else:
+            self._uCl[XYType]=f
+
+    def _Cl(self,XYType,ell,lensed=False):
+
+            
+        mapXYType = XYType.upper()
+        validateMapType(mapXYType)
+
+        if mapXYType=="ET": mapXYType="TE"
+        ell = np.array(ell)
+
+        try:
+            if lensed:    
+                retlist = np.array(self._lCl[mapXYType](ell))
+                return retlist
+            else:
+                retlist = np.array(self._uCl[mapXYType](ell))
+                return retlist
+
+        except:
+            zspecs = ['EB','TB']
+            if (XYType in zspecs) or (XYType[::-1] in zspecs):
+                return ell*0.
+            else:
+                raise
+
+    def uCl(self,XYType,ell):
+        if self.always_lensed:
+            assert not(self.always_unlensed)
+            return self.lCl(XYType,ell)
+        return self._Cl(XYType,ell,lensed=False)
+    def lCl(self,XYType,ell):
+        if self.always_unlensed:
+            assert not(self.always_lensed)
+            return self.uCl(XYType,ell)
+        return self._Cl(XYType,ell,lensed=True)
     
