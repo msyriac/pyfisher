@@ -6,6 +6,7 @@ from pandas import DataFrame
 import pandas as pd
 import datetime
 from scipy.interpolate import interp1d
+from scipy.stats import binned_statistic as binnedstat
 
 data_dir = f'{os.path.dirname(os.path.realpath(__file__))}/data/'
 
@@ -35,6 +36,8 @@ def get_lensing_nl(exp):
     froot = os.path.dirname(__file__)+"/data/lensing_nl/"
     if exp=='planck':
         return np.loadtxt(f'{froot}planck_2018_mv_nlkk.dat',usecols=[0,1],unpack=True)
+    elif exp=='act_dr6':
+        return np.loadtxt(f'{froot}act_dr6.txt',usecols=[0,1],unpack=True)
     elif exp=='so_goal':
         return np.loadtxt(f'{froot}so_v3_1_deproj0_goal_fsky0p4_it.dat',usecols=[0,7],unpack=True)
     elif exp=='s4':
@@ -134,9 +137,18 @@ def get_lensing_fisher(bin_edges,ells,nls,fsky,root_name='v20201120',interpolate
     nl_dict = {'kk':interp(ells,nls,bounds_error=True)}
     cls = load_theory_dict(f'{data_dir}{root_name}_cmb_derivs/{root_name}_cmb_derivs_cmb_fiducial.txt',ells)
     dcls = load_derivs(f'{data_dir}{root_name}_cmb_derivs',param_list,ells)
-    return band_fisher(param_list,bin_edges,['kk'],cls,nl_dict,dcls,interpolate=interpolate)
+    F = band_fisher(param_list,bin_edges,['kk'],cls,nl_dict,dcls,interpolate=interpolate)  * fsky
+    return F
 
-
+def get_lensing_sn(bin_edges,ells,nls,fsky,interpolate=False,root_name='v20201120'):
+    cents,bin = get_binner(bin_edges,interpolate)
+    nls_dict = {'kk':interp(ells,nls,bounds_error=True)}
+    cls = load_theory_dict(f'{data_dir}{root_name}_cmb_derivs/{root_name}_cmb_derivs_cmb_fiducial.txt',ells)
+    cov = gaussian_band_covariance(bin_edges,['kk'],cls,nls_dict,interpolate=interpolate) / fsky
+    cinv = np.linalg.inv(cov)
+    clkk = bin(cls['kk'])[...,None]
+    return np.sqrt(np.einsum('ik,ik->',np.einsum('ij,ijk->ik',clkk,cinv),clkk))
+    
 
 def check_fisher_sanity(fmat,param_list):
     Ny,Nx = fmat.shape
@@ -826,7 +838,7 @@ def get_binner(bin_edges,interpolate):
         bin = lambda x: x(cents)
     else:
         ells = np.arange(bin_edges[0],bin_edges[-1]+1,1)
-        bin = lambda x: bin1d(bin_ediges,ells,x(ells))[1]
+        bin = lambda x: bin1d(bin_edges,ells,x(ells))[1]
     return cents, bin
 
 
