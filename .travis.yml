@@ -28,3 +28,4 @@ addons:
 
 env:
   - GFORTRAN=gfortran-6
+  - FC=gfortran-6

@@ -58,6 +58,6 @@ from anywhere on your system.
 Basic Usage
 -----------
 
-See and run ``python bin/test_lensing.py`` to reproduce Planck constraints and get a feel for how to use this package.
+See and run ``python tests/test_lensing.py`` to reproduce Planck constraints and get a feel for how to use this package.
 
 
