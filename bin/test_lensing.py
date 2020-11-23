@@ -8,7 +8,7 @@ from pyfisher import mpi
 import argparse
 # Parse command line
 parser = argparse.ArgumentParser(description='Do a thing.')
-parser.add_argument("exp_name", type=str,help='Positional arg.')
+parser.add_argument("--exp", type=str,default='planck',help='Experiment name.')
 parser.add_argument("--Lmin",     type=int,  default=4,help="A description.")
 parser.add_argument("--Lmax",     type=int,  default=400,help="A description.")
 parser.add_argument("--fsky",     type=float,  default=0.65,help="A description.")
@@ -16,7 +16,7 @@ args = parser.parse_args()
 
 Lmin = args.Lmin
 Lmax = args.Lmax
-exp = args.exp_name
+exp = args.exp
 fsky = args.fsky
 
 # Load default fiducial parameters
@@ -44,6 +44,8 @@ sigmas = F1.sigmas()
 print("Planck lens + BAO (s8, om, H0 parameterization)")
 for p in ['s8','om','H0']:
     print(f'{p} = {fids[p]:.03f}+-{sigmas[p]:.03f}')
+assert np.isclose(sigmas['s8'],0.01539,rtol=1e-3)
+assert np.isclose(sigmas['om'],0.01903,rtol=1e-3)
 
 # Planck lens alone (s8om^0.25, H0 parameterization)
 fids['s8om0.25'] = fids['s8'] * fids['om']**0.25
@@ -54,6 +56,8 @@ sigmas = F.sigmas()
 print("Planck lens  (s8om^0.25, H0 parameterization)")
 for p in ['s8om0.25']:
     print(f'{p} = {fids[p]:.03f}+-{sigmas[p]:.03f}')
+assert np.isclose(sigmas['s8om0.25'],0.01516,rtol=1e-3)
+
 
 # Planck lens + BAO + CMB (mnu)
 lcmb = pyfisher.get_saved_fisher('planck_lowell',0.65)
@@ -65,4 +69,5 @@ sigmas = F.sigmas()
 print("Planck lens + BAO + CMB (mnu)")
 for p in ['mnu']:
     print(f'{p} = {fids[p]:.03f}+-{sigmas[p]:.03f}')
+assert np.isclose(sigmas['mnu'],0.0743,rtol=1e-3)
 pyfisher.contour_plot(F,fids,'contour.png',name=None)

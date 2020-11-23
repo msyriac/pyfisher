@@ -10,7 +10,12 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = [ ]
+requirements = ['numpy',
+                'matplotlib',
+                'scipy',
+                'pandas',
+                'camb',
+                'chainconsumer']
 
 setup_requirements = ['pytest-runner', ]
 
@@ -19,7 +24,7 @@ test_requirements = ['pytest>=3', ]
 setup(
     author="Mathew Madhavacheril",
     author_email='mathewsyriac@gmail.com',
-    python_requires='>=3.5',
+    python_requires='>=3.6',
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
