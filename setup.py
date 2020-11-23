@@ -3,7 +3,7 @@
 """The setup script."""
 
 from setuptools import setup, find_packages
-
+import versioneer
 with open('README.rst') as readme_file:
     readme = readme_file.read()
 
@@ -20,7 +20,6 @@ requirements = ['numpy',
 setup_requirements = ['pytest-runner', ]
 
 test_requirements = ['pytest>=3', ]
-
 setup(
     author="Mathew Madhavacheril",
     author_email='mathewsyriac@gmail.com',
@@ -48,6 +47,7 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/msyriac/pyfisher',
-    version='2.0.0',
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     zip_safe=False,
 )
