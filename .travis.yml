@@ -21,6 +21,10 @@ deploy:
 
 addons:
   apt:
-  apt_packages:
-    - gfortran-6
-            
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - gfortran-6
+
+env:
+  - GFORTRAN=gfortran-6
