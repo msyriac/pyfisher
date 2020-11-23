@@ -13,9 +13,6 @@ pyfisher
         :target: https://pyfisher.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
-.. image:: https://coveralls.io/repos/github/msyriac/pyfisher/badge.svg?branch=master
-		   :target: https://coveralls.io/github/msyriac/pyfisher?branch=master
-
 .. image:: https://pyup.io/repos/github/msyriac/pyfisher/shield.svg
      :target: https://pyup.io/repos/github/msyriac/pyfisher/
      :alt: Updates
