@@ -4,11 +4,11 @@ wheel==0.33.6
 watchdog==0.9.0
 flake8==3.7.8
 tox==3.20.1
-coverage==4.5.4
-Sphinx==1.8.5
-twine==1.14.0
+coverage==5.3
+Sphinx==3.3.1
+twine==3.2.0
 
-pytest==4.6.5
-pytest-runner==5.1
-pytest-cov
-versioneer
+pytest==6.1.2
+pytest-runner==5.2
+pytest-cov==2.10.1
+versioneer==0.19
