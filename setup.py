@@ -37,11 +37,6 @@ setup(
         'Programming Language :: Python :: 3.8',
     ],
     description="Fisher forecasting for cosmological surveys",
-    entry_points={
-        'console_scripts': [
-            'pyfisher=pyfisher.cli:main',
-        ],
-    },
     install_requires=requirements,
     license="BSD license",
     long_description=readme + '\n\n' + history,
