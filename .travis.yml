@@ -5,7 +5,10 @@ python:
   - 3.7
   - 3.6
       
-install: pip install -U tox-travis
+install:
+  pip install -U tox-travis
+  FC=gfortran-6 pip install camb -I
+  
 script: tox
 deploy:
   provider: pypi
