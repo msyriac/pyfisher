@@ -19,6 +19,10 @@ pyfisher
 .. image:: https://pyup.io/repos/github/msyriac/pyfisher/shield.svg
      :target: https://pyup.io/repos/github/msyriac/pyfisher/
      :alt: Updates
+     
+.. image:: https://pyup.io/repos/github/msyriac/pyfisher/python-3-shield.svg
+     :target: https://pyup.io/repos/github/msyriac/pyfisher/
+     :alt: Python 3
 
 
 
