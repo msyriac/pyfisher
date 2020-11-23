@@ -9,6 +9,6 @@ Sphinx==1.8.5
 twine==1.14.0
 
 pytest==6.1.2
-pytest-runner==5.1
-pytest-cov
-versioneer
+pytest-runner==5.2
+pytest-cov==2.10.1
+versioneer==0.19
