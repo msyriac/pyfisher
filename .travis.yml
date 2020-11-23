@@ -15,3 +15,8 @@ deploy:
     tags: true
     repo: msyriac/pyfisher
     python: 3.8
+
+addons:
+  apt_packages:
+  - gfortran
+    
