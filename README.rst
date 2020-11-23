@@ -7,7 +7,7 @@ pyfisher
         :target: https://pypi.python.org/pypi/pyfisher
 
 .. image:: https://img.shields.io/travis/msyriac/pyfisher.svg
-        :target: https://travis-ci.com/msyriac/pyfisher
+        :target: https://travis-ci.org/msyriac/pyfisher
 
 .. image:: https://readthedocs.org/projects/pyfisher/badge/?version=latest
         :target: https://pyfisher.readthedocs.io/en/latest/?badge=latest
