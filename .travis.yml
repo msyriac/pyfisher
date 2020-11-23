@@ -11,7 +11,7 @@ install:
   - ln -s /usr/bin/gfortran-7 gfortran-symlinks/gfortran
   - export PATH=$PWD/gfortran-symlinks:$PATH
   - FC=gfortran-7 pip install camb -I
-  - pip install pytest-cov
+  - pip install -U pytest-cov
   
 script: tox
 deploy:
