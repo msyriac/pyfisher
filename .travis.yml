@@ -12,6 +12,11 @@ install:
   - export PATH=$PWD/gfortran-symlinks:$PATH
   - FC=gfortran-7 pip install camb -I
   - pip install -U pytest-cov
+  - pip install -U coveralls
+
+after_success:
+  - coverage run --source=pyfisher -m pytest tests/
+  - coveralls
   
 script: tox
 deploy:
