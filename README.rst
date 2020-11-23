@@ -28,7 +28,7 @@ pyfisher is a python package for calculating Fisher matrices and for forecasting
 
 While the new version does not (yet) provide an interface for CMB lensing noise curves with iterative
 delensing like the old one did, it has a simplified API, lots of pre-calculated
-Fishers, and a tool to reparametrize into a :math:`\sigma_8`  parameterization.
+Fishers, and a tool to reparametrize into a σ8  parameterization.
 
 
 * Free software: BSD license
