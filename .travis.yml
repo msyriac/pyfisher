@@ -6,8 +6,8 @@ python:
   - 3.6
       
 install:
-  pip install -U tox-travis
-  FC=gfortran-6 pip install camb -I
+  - pip install -U tox-travis
+  - FC=gfortran-6 pip install camb -I
   
 script: tox
 deploy:
@@ -30,5 +30,4 @@ addons:
       - gfortran-6
 
 env:
-  - GFORTRAN=gfortran-6
   - FC=gfortran-6
