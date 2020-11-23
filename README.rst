@@ -1,4 +1,26 @@
-# pyfisher 2
+========
+pyfisher
+========
+
+
+.. image:: https://img.shields.io/pypi/v/pyfisher.svg
+        :target: https://pypi.python.org/pypi/pyfisher
+
+.. image:: https://img.shields.io/travis/msyriac/pyfisher.svg
+        :target: https://travis-ci.com/msyriac/pyfisher
+
+.. image:: https://readthedocs.org/projects/pyfisher/badge/?version=latest
+        :target: https://pyfisher.readthedocs.io/en/latest/?badge=latest
+        :alt: Documentation Status
+
+
+.. image:: https://pyup.io/repos/github/msyriac/pyfisher/shield.svg
+     :target: https://pyup.io/repos/github/msyriac/pyfisher/
+     :alt: Updates
+
+
+
+Fisher forecasting for cosmological surveys
 
 pyfisher is a python package for calculating Fisher matrices and for forecasting parameter uncertainties for cosmological surveys.
 
@@ -8,7 +30,12 @@ While the new version does not (yet) provide an interface for CMB lensing noise 
 delensing like the old one did, it has a simplified API, lots of pre-calculated Fishers, and a tool to reparametrize into a <img src="https://render.githubusercontent.com/render/math?math=\sigma_8">  parameterization.
 
 
-## Installation
+* Free software: BSD license
+* Documentation: https://pyfisher.readthedocs.io.
+
+
+Installation
+------------
 
 Install in two steps:
 
@@ -26,6 +53,8 @@ import pyfisher
 from anywhere on your system.
 
 
-## Basic Usage
+Basic Usage
+-----------
 
 See and run `python bin/test_lensing.py planck` to reproduce Planck constraints and get a feel for how to use this package.
+
