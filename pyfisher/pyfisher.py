@@ -95,11 +95,11 @@ def prepare_output(args, message="",allow_changes=False):
     output_root = f'{output_path}/{rname}'
     return output_root
 
-def contour_plot(fisher,fiducials,fname,name='',add_marker=False):
+def contour_plot(fisher,fiducials,fname,name='',add_marker=False,latex=True):
     from chainconsumer import ChainConsumer
     mean = [fiducials[key] for key in fisher.params]
     cov = np.linalg.inv(fisher.values)
-    parameters = [latex_mapping[x] for x in fisher.params]
+    parameters = [latex_mapping[x] for x in fisher.params] if latex else fisher.params
 
     c = ChainConsumer()
     c.add_covariance(mean, cov, parameters=parameters, name=name,shade=False)
@@ -612,6 +612,26 @@ def get_s8(zs=[0.],params=None,nonlinear=False,kmax=5.2,**kwargs):
     s8 = np.array(results.get_sigma8())
     return s8[::-1] if rev else s8
 
+def get_bao_dr12(params=None,engine='camb',de='ppf',rs_fid = 147.78,zs=[0.38,0.51,0.61]):
+    import camb
+    params = map_params(params,engine=engine)
+    zs = np.asarray(zs)
+    if engine=='camb':
+        pars = set_camb_pars(params=params,de=de)
+        results = camb.get_results(pars)
+        rdrag = results.get_derived_params()['rdrag']
+        rs_rescale = 1 / rs_fid
+        rs = rdrag * rs_rescale
+        retdict = {}
+        retdict["DM_over_rs"] = np.zeros((zs.size,))
+        retdict["bao_Hz_rs"] = np.zeros((zs.size,))
+        for i,z in enumerate(zs):
+            retdict["DM_over_rs"][i] = (1 + z) * results.angular_diameter_distance(z) / rs
+            retdict["bao_Hz_rs"][i] = results.hubble_parameter(z) * rs
+    else:
+        raise NotImplementedError
+    return zs,retdict
+
 def get_bao_rs_dV(zs,params=None,engine='camb',de='ppf'):
     #FIXME: camb and class only agree at 3% level!!!
     import camb
@@ -896,8 +916,8 @@ def get_info(package=None,path=None,validate=True):
 
 def validate_map_type(mapXYType):
     assert not(re.search('[^TEB]', mapXYType)) and (len(mapXYType)==2), \
-      bcolors.FAIL+"\""+mapXYType+"\" is an invalid map type. XY must be a two" + \
-      " letter combination of T, E and B. e.g TT or TE."+bcolors.ENDC
+      mapXYType+"\" is an invalid map type. XY must be a two" + \
+      " letter combination of T, E and B. e.g TT or TE."
 
 class TheorySpectra:
     '''

@@ -108,3 +108,5 @@ ENV/
 *.png
 output/test*
 output/cl*
+
+script*sh
