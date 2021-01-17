@@ -307,7 +307,9 @@ class FisherMatrix(DataFrame):
         Returns marginalized 1-sigma uncertainties on each parameter in the Fisher matrix.
         """
         finv = np.linalg.inv(self.values)
-        errs = np.diagonal(finv)**(0.5)
+        err2 = np.diagonal(finv)
+        assert np.all(err2>0)
+        errs = err2**(0.5)
         return dict(zip(self.params,errs))
     
     def delete(self,params):
@@ -793,7 +795,8 @@ def reparameterize(Fmat,oparams,fiducials,deriv_root='v20201120_s8_derivs',verbo
             iM[i,j] = val
     M = np.linalg.pinv(iM)
     interm = np.dot(M.T,Fmat)
-    return FisherMatrix(np.dot(interm,M),oparams)
+    repar = FisherMatrix(np.dot(interm,M),oparams)
+    return repar
 
 
 def load_theory(pars,lpad=9000):
