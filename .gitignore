@@ -109,4 +109,6 @@ ENV/
 output/test*
 output/cl*
 
+# This is private for now
+pyfisher/data/lensing_nl/act_dr6.txt
 script*sh
