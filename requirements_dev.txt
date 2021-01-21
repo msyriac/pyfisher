@@ -6,7 +6,7 @@ wheel==0.36.2
 flake8==3.8.4
 tox==3.21.2
 coverage==5.3.1
-Sphinx==3.3.1
+Sphinx==3.4.3
 
 pytest==6.2.1
 pytest-runner==5.2
