@@ -275,6 +275,7 @@ class FisherMatrix(DataFrame):
         return f
 
     def __radd__(self,other):
+        # raise NotImplementedError
         return self._add(other,radd=True)
 
     def __add__(self,other):
@@ -287,6 +288,10 @@ class FisherMatrix(DataFrame):
         return FisherMatrix(self.values*other,self.columns.tolist())
 
     def _add(self,other,radd=False):
+        # if other is None: return self
+        # odf = pd.DataFrame(data = other.values,columns=other.columns,index=other.index)
+        # tdf = pd.DataFrame(data = self.values,columns=self.columns,index=self.index)
+        # new_fpd = tdf.add(odf,fill_value=0)
         if other is None: return self
         F1 = pd.DataFrame(self.values,columns=self.params,index=self.params)
         F2 = pd.DataFrame(other.values,columns=other.params,index=other.params)
@@ -296,18 +301,23 @@ class FisherMatrix(DataFrame):
             new_fpd = pd.DataFrame.add(F1,F2,fill_value=0)
         return FisherMatrix(new_fpd.values,new_fpd.columns.tolist())
 
-    def add_prior(self,param,prior):
+    def add_prior(self,param,prior,warn=True):
         """
         Adds 1-sigma value 'prior' to the parameter name specified by 'param'
         """
-        self[param][param] += 1./prior**2.
+        try:
+            self[param][param] += 1./prior**2.
+        except KeyError:
+            if warn: print(f"WARNING: skipping prior for {param} since it was not found")
         
     def sigmas(self):
         """
         Returns marginalized 1-sigma uncertainties on each parameter in the Fisher matrix.
         """
         finv = np.linalg.inv(self.values)
-        errs = np.diagonal(finv)**(0.5)
+        err2 = np.diagonal(finv)
+        assert np.all(err2>0)
+        errs = err2**(0.5)
         return dict(zip(self.params,errs))
     
     def delete(self,params):
@@ -813,7 +823,8 @@ def reparameterize(Fmat,oparams,fiducials,deriv_root='v20201120_s8_derivs',verbo
             iM[i,j] = val
     M = np.linalg.pinv(iM)
     interm = np.dot(M.T,Fmat)
-    return FisherMatrix(np.dot(interm,M),oparams)
+    repar = FisherMatrix(np.dot(interm,M),oparams)
+    return repar
 
 
 def load_theory(pars,lpad=9000):
