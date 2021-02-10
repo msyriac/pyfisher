@@ -430,7 +430,7 @@ def gaussian_band_covariance(bin_edges,specs,cls_dict,nls_dict,interpolate=False
             nl_bg = _symmz(nls_dict,bg)
 
             cov[:,i,j] = ((cl_ag+nl_ag)*(cl_bd+nl_bd)+(cl_ad+nl_ad)*(cl_bg+nl_bg))/(2*cents+1)/delta_ell
-            if i!=j: cov[:,i,j] = cov[:,j,i].copy()
+            if i!=j: cov[:,j,i] = cov[:,i,j].copy()
     return cov
 
 
