@@ -74,6 +74,9 @@ def interp(x,y,bounds_error=False,fill_value=0.,**kwargs):
     return interp1d(x,y,bounds_error=bounds_error,fill_value=fill_value,**kwargs)
 
 def gauss_beam(ell,fwhm):
+    """
+    Map-level beam transfer function B(ell) for FWHM in arcminutes.
+    """
     tht_fwhm = np.deg2rad(fwhm / 60.)
     return np.exp(-(tht_fwhm**2.)*(ell**2.) / (16.*np.log(2.)))
 
