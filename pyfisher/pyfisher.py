@@ -130,14 +130,18 @@ def get_saved_fisher(name,fsky=None,root_name='v20201120'):
         assert fsky is None
         return read_fisher(f'{data_dir}{root_name}_{name}/{root_name}_{name}_bao_fisher.txt',delim=',')
 
-def get_lensing_fisher(bin_edges,ells,nls,fsky,root_name='v20201120',interpolate=True):
+def get_lensing_fisher(bin_edges,ells,nls,fsky,root_name='v20201120',interpolate=True,errs=None):
     param_file = f'{data_dir}{root_name}_cmb_derivs/params.txt'
     _,fids = get_param_info(param_file,exclude=None)
     param_list = list(fids.keys())
-    nl_dict = {'kk':interp(ells,nls,bounds_error=True)}
     cls = load_theory_dict(f'{data_dir}{root_name}_cmb_derivs/{root_name}_cmb_derivs_cmb_fiducial.txt',ells)
     dcls = load_derivs(f'{data_dir}{root_name}_cmb_derivs',param_list,ells)
-    F = band_fisher(param_list,bin_edges,['kk'],cls,nl_dict,dcls,interpolate=interpolate)  * fsky
+    if errs is None:
+        nl_dict = {'kk':interp(ells,nls,bounds_error=True)}
+        F = band_fisher(param_list,bin_edges,['kk'],cls,nl_dict,dcls,interpolate=interpolate)  * fsky
+    else:
+        assert fsky is None
+        F = band_fisher(param_list,bin_edges,['kk'],None,None,dcls,interpolate=interpolate,errs=errs)
     return F
 
 def get_lensing_sn(bin_edges,ells,nls,fsky,interpolate=False,root_name='v20201120'):
@@ -434,13 +438,18 @@ def gaussian_band_covariance(bin_edges,specs,cls_dict,nls_dict,interpolate=False
     return cov
 
 
-def band_fisher(param_list,bin_edges,specs,cls_dict,nls_dict,derivs_dict,interpolate=True):
+def band_fisher(param_list,bin_edges,specs,cls_dict,nls_dict,derivs_dict,interpolate=True,errs=None,cov=None):
 
     cents,bin = get_binner(bin_edges,interpolate)
     nbins = len(bin_edges) - 1
     ncomps = len(specs)
 
-    cov = gaussian_band_covariance(bin_edges,specs,cls_dict,nls_dict,interpolate=interpolate)
+    if errs is None:
+        cov = gaussian_band_covariance(bin_edges,specs,cls_dict,nls_dict,interpolate=interpolate)
+    else:
+        assert cls_dict is None
+        assert nls_dict is None
+        cov = (errs**2.)[:,None,None]
     cinv = np.linalg.inv(cov)
 
     nparams = len(param_list)

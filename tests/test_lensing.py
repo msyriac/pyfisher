@@ -9,6 +9,8 @@ def parse_args(args):
     # Parse command line
     parser = argparse.ArgumentParser(description='Do a thing.')
     parser.add_argument("--exp", type=str,default='planck',help='Experiment name.')
+    parser.add_argument("--bin-edges-file",     type=str,  default=None,help="A description.")
+    parser.add_argument("--errs-file",     type=str,  default=None,help="A description.")
     parser.add_argument("--Lmin",     type=int,  default=4,help="A description.")
     parser.add_argument("--Lmax",     type=int,  default=400,help="A description.")
     parser.add_argument("--fsky",     type=float,  default=0.65,help="A description.")
@@ -17,9 +19,9 @@ def parse_args(args):
 
 def main():
     args = parse_args(sys.argv[1:])
-    run_lensing_demo(args.Lmin,args.Lmax,args.exp,args.fsky,test=False)
+    run_lensing_demo(args.Lmin,args.Lmax,args.exp,args.fsky,args.bin_edges_file,args.errs_file,test=False)
 
-def run_lensing_demo(Lmin,Lmax,exp,fsky,test=False):
+def run_lensing_demo(Lmin,Lmax,exp,fsky,bin_edges_file=None,errs_file=None,test=False):
 
     # Load default fiducial parameters
     fids = pyfisher.get_fiducials()
@@ -30,8 +32,18 @@ def run_lensing_demo(Lmin,Lmax,exp,fsky,test=False):
     # Load a pre-calculated CMB lensing noise curve
     ells,nls = pyfisher.get_lensing_nl(exp)
     # Calculate a CMB lensing Fisher
-    bin_edges = np.arange(Lmin,Lmax)
-    lens = pyfisher.get_lensing_fisher(bin_edges,ells,nls,fsky)
+    if bin_edges_file is None:
+        bin_edges = np.arange(Lmin,Lmax)
+    else:
+        bin_edges = np.loadtxt(bin_edges_file)
+
+    if errs_file is None:
+        errs = None
+    else:
+        errs = np.loadtxt(errs_file)
+        fsky = None
+
+    lens = pyfisher.get_lensing_fisher(bin_edges,ells,nls,fsky,errs=errs)
 
     # Planck lens + BAO (s8, om, H0 parameterization)
     F = lens+bao
