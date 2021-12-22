@@ -43,6 +43,33 @@ def get_lensing_nl(exp):
     elif exp=='s4':
         return np.loadtxt(f'{froot}s4_noise.dat',usecols=[0,7],unpack=True)
 
+def get_so_ilc_fnoise(exp,deproj='deproj0',mode='baseline'):
+    fnoise = {}
+    import so_models_v3
+    froot = os.path.dirname(so_models_v3.__file__)+"/../LAT_comp_sep_noise/"
+    exp = exp.lower()
+    if exp=='so': exp = "so_v3.1.0"
+    if exp=='so_v3.1.0':
+        col = int(deproj[-1])
+        for pol in ['TT','EE','BB']:
+            if pol=='TT':
+                ells,nl = np.loadtxt(f'{froot}v3.1.0/SO_LAT_Nell_T_atmv1_{mode}_fsky0p4_ILC_CMB.txt',unpack=True,usecols=[0,col+1])                
+            else:
+                ells,nl = np.loadtxt(f'{froot}v3.1.0/SO_LAT_Nell_P_{mode}_fsky0p4_ILC_CMB_{pol[0]}.txt',unpack=True,usecols=[0,col+1])
+            fnoise[pol] = interp(ells,nl,fill_value=np.inf)        
+    elif exp=='aso':
+        sens = {'threshold':'SENS0','baseline':'SENS1','goal':'SENS2'}[mode]
+        ells,nl = np.loadtxt(f'{froot}aso/SOV3_T_default1-4-2_noisecurves_{deproj}_{sens}_mask_16000_ell_TT_yy_39GHzfix_ext15yrs.txt',unpack=True,usecols=[0,1])
+        fnoise['TT'] = interp(ells,nl,fill_value=np.inf) 
+        ells,nlee,nlbb = np.loadtxt(f'{froot}aso/SOV3_pol_default1-4-2_noisecurves_{deproj}_{sens}_mask_16000_ell_EE_BB_ext15yrs.txt',unpack=True,usecols=[0,1,2])
+        fnoise['EE'] = interp(ells,nlee,fill_value=np.inf) 
+        fnoise['BB'] = interp(ells,nlbb,fill_value=np.inf) 
+    else:
+        raise ValueError
+    return fnoise
+
+
+
 def bin1d(bin_edges,ix,iy,stat=np.nanmean):
     numbins = len(bin_edges)-1
     cents = (bin_edges[:-1]+bin_edges[1:])/2.
