@@ -36,6 +36,10 @@ def get_lensing_nl(exp):
     froot = os.path.dirname(__file__)+"/data/lensing_nl/"
     if exp=='planck':
         return np.loadtxt(f'{froot}planck_2018_mv_nlkk.dat',usecols=[0,1],unpack=True)
+    elif exp=='planck_pr4':
+        ls,cpp = np.loadtxt(f'{froot}planck_2022_npipe_mv_N0.dat',usecols=[0,1],unpack=True)
+        ckk = cpp * 2. * np.pi / 4. * 1e-7
+        return ls,ckk
     elif exp=='act_dr6':
         return np.loadtxt(f'{froot}act_dr6.txt',usecols=[0,1],unpack=True)
     elif exp=='so_goal':
