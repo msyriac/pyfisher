@@ -41,7 +41,7 @@ def get_lensing_nl(exp):
         ckk = cpp * 2. * np.pi / 4. * 1e-7
         return ls,ckk
     elif exp=='act_dr6':
-        return np.loadtxt(f'{froot}act_dr6.txt',usecols=[0,1],unpack=True)
+        return np.loadtxt(f'{froot}N_L_kk_act_dr6.txt',usecols=[0,1],unpack=True)
     elif exp=='so_goal':
         return np.loadtxt(f'{froot}so_v3_1_deproj0_goal_fsky0p4_it.dat',usecols=[0,7],unpack=True)
     elif exp=='s4':
