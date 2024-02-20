@@ -1,4 +1,5 @@
-# Noise curve for cross-correlations with the ACT DR6 Lensing map 
+# Noise curve for cross-correlations with the ACT DR6 Lensing map
+# Original filename: N_L_kk_act_dr6_lensing_v1_baseline.txt
 #  L,N_L
 0.000000000000000000e+00 8.765961005963158953e-08
 1.000000000000000000e+00 8.765961005963158953e-08
