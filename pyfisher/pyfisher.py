@@ -31,103 +31,35 @@ latex_mapping = {
     's8om0.25': '$\\sigma_8 \\Omega_m^{0.25}$',
 }
 
-def get_lensing_nl(exp):
-    exp = exp.strip().lower()
-    froot = os.path.dirname(__file__)+"/data/lensing_nl/"
-    if exp=='planck':
-        return np.loadtxt(f'{froot}planck_2018_mv_nlkk.dat',usecols=[0,1],unpack=True)
-    elif exp=='planck_pr4':
-        ls,cpp = np.loadtxt(f'{froot}planck_2022_npipe_mv_N0.dat',usecols=[0,1],unpack=True)
-        ckk = cpp * 2. * np.pi / 4. * 1e-7
-        return ls,ckk
-    elif exp=='act_dr6':
-        return np.loadtxt(f'{froot}act_dr6.txt',usecols=[0,1],unpack=True)
-    elif exp=='so_goal':
-        return np.loadtxt(f'{froot}so_v3_1_deproj0_goal_fsky0p4_it.dat',usecols=[0,7],unpack=True)
-    elif exp=='s4':
-        return np.loadtxt(f'{froot}s4_noise.dat',usecols=[0,7],unpack=True)
 
-def get_so_ilc_fnoise(exp,deproj='deproj0',mode='baseline'):
-    fnoise = {}
-    import so_models_v3
-    froot = os.path.dirname(so_models_v3.__file__)+"/../LAT_comp_sep_noise/"
-    exp = exp.lower()
-    if exp=='so': exp = "so_v3.1.0"
-    if exp=='so_v3.1.0':
-        col = int(deproj[-1])
-        for pol in ['TT','EE','BB']:
-            if pol=='TT':
-                ells,nl = np.loadtxt(f'{froot}v3.1.0/SO_LAT_Nell_T_atmv1_{mode}_fsky0p4_ILC_CMB.txt',unpack=True,usecols=[0,col+1])                
-            else:
-                ells,nl = np.loadtxt(f'{froot}v3.1.0/SO_LAT_Nell_P_{mode}_fsky0p4_ILC_CMB_{pol[0]}.txt',unpack=True,usecols=[0,col+1])
-            fnoise[pol] = interp(ells,nl,fill_value=np.inf)        
-    elif exp=='aso':
-        sens = {'threshold':'SENS0','baseline':'SENS1','goal':'SENS2'}[mode]
-        ells,nl = np.loadtxt(f'{froot}aso/SOV3_T_default1-4-2_noisecurves_{deproj}_{sens}_mask_16000_ell_TT_yy_39GHzfix_ext15yrs.txt',unpack=True,usecols=[0,1])
-        fnoise['TT'] = interp(ells,nl,fill_value=np.inf) 
-        ells,nlee,nlbb = np.loadtxt(f'{froot}aso/SOV3_pol_default1-4-2_noisecurves_{deproj}_{sens}_mask_16000_ell_EE_BB_ext15yrs.txt',unpack=True,usecols=[0,1,2])
-        fnoise['EE'] = interp(ells,nlee,fill_value=np.inf) 
-        fnoise['BB'] = interp(ells,nlbb,fill_value=np.inf) 
+"""
+Generic Fisher tools
+====================
+"""
+
+def five_point_stencil_first_deriv(f,x,h):
+    return (-f(x+2*h)+8*f(x+h)-8*f(x-h)+f(x-2*h))/12/h
+    
+def second_derivative(f,x,h):
+    return (f(x+h)-2*f(x)+f(x-h))/h**2
+
+def first_order_first_deriv(f,x,h):
+    return (f(x+h)-f(x-h))/2/h
+
+def get_deriv(func,param,fiducials,step_frac=0.1,dtype='five-point'):
+    p1 = dict(fiducials)
+    f = lambda x: func(fiducials,param,x)
+    x0 = fiducials[param]
+    h = x0 * step_frac
+    if dtype=='first':
+        dfunc = first_order_first_deriv
+    elif dtype=='five-point':
+        dfunc = five_point_stencil_first_deriv
     else:
         raise ValueError
-    return fnoise
+    deriv = dfunc(f,x0,h)
+    return deriv
 
-
-
-def bin1d(bin_edges,ix,iy,stat=np.nanmean):
-    numbins = len(bin_edges)-1
-    cents = (bin_edges[:-1]+bin_edges[1:])/2.
-    bin_edges_min = bin_edges.min()
-    bin_edges_max = bin_edges.max()
-    x = ix.copy()
-    y = iy.copy()
-    # this just prevents an annoying warning (which is otherwise informative) everytime
-    # all the values outside the bin_edges are nans
-    y[x<bin_edges_min] = 0
-    y[x>bin_edges_max] = 0
-    # pretty sure this treats nans in y correctly, but should double-check!
-    bin_means = binnedstat(x,y,bins=bin_edges,statistic=stat)[0]
-    return cents,bin_means
-
-
-def mkdir(dirpath,comm=None):
-    if comm is None:
-        from . import mpi
-        comm = mpi.MPI.COMM_WORLD
-    exists = os.path.exists(dirpath)
-    comm.Barrier()
-    if comm.Get_rank()==0: 
-        if not (exists):
-            os.makedirs(dirpath)
-    return exists
-
-def interp(x,y,bounds_error=False,fill_value=0.,**kwargs):
-    return interp1d(x,y,bounds_error=bounds_error,fill_value=fill_value,**kwargs)
-
-def gauss_beam(ell,fwhm):
-    """
-    Map-level beam transfer function B(ell) for FWHM in arcminutes.
-    """
-    tht_fwhm = np.deg2rad(fwhm / 60.)
-    return np.exp(-(tht_fwhm**2.)*(ell**2.) / (16.*np.log(2.)))
-
-
-def prepare_output(args, message="",allow_changes=False):
-    output_path = args.output
-    assert output_path.strip()[-1]!='/'
-    mkdir(f'{output_path}')
-    rname = os.path.basename(f'{output_path}')
-    with open(f'{output_path}/info.log','w') as f:
-        f.write(f'{message}\n')
-        now = datetime.datetime.now()
-        f.write(f'Current date and time : {now.strftime("%Y-%m-%d %H:%M:%S")}\n')
-        for arg in vars(args):
-            f.write(f'{arg} :  {getattr(args, arg)}\n')
-        info = get_info(path=os.path.realpath(__file__))
-        if not(allow_changes): assert not(info['changes']), "Git must not have changes to run this script."
-        f.write(pretty_info(info))
-    output_root = f'{output_path}/{rname}'
-    return output_root
 
 def contour_plot(fisher,fiducials,fname,name='',add_marker=False,latex=True):
     from chainconsumer import ChainConsumer
@@ -142,78 +74,13 @@ def contour_plot(fisher,fiducials,fname,name='',add_marker=False,latex=True):
     fig = c.plotter.plot()
     fig.set_size_inches(3 + fig.get_size_inches()) 
     fig.savefig(fname)
-
-
-def get_fiducials(root_name='v20201120'):
-    param_file = f'{data_dir}{root_name}_cmb_derivs/params.txt'
-    _,fids = get_param_info(param_file,exclude=None)
-    return fids
-
-
-def get_saved_fisher(name,fsky=None,root_name='v20201120'):
-    if name=='planck_lowell':
-        fsky = 1 if fsky is None else fsky
-        return fsky * read_fisher(f'{data_dir}{root_name}_saved_cmb/{root_name}_saved_cmb_planck_low_ell_TT_fullsky.txt',delim=',')
-    elif name=='planck_highell':
-        fsky = 1 if fsky is None else fsky
-        return fsky * read_fisher(f'{data_dir}{root_name}_saved_cmb/{root_name}_saved_cmb_planck_high_ell_TTEETE_fullsky.txt',delim=',')
-    elif name=='desi_bao':
-        assert fsky is None
-        return read_fisher(f'{data_dir}{root_name}_{name}/{root_name}_{name}_bao_fisher.txt',delim=',')
-    elif name=='boss_bao':
-        assert fsky is None
-        return read_fisher(f'{data_dir}{root_name}_{name}/{root_name}_{name}_bao_fisher.txt',delim=',')
-
-def get_lensing_fisher(bin_edges,ells,nls,fsky,root_name='v20201120',interpolate=True,errs=None):
-    param_file = f'{data_dir}{root_name}_cmb_derivs/params.txt'
-    _,fids = get_param_info(param_file,exclude=None)
-    param_list = list(fids.keys())
-    cls = load_theory_dict(f'{data_dir}{root_name}_cmb_derivs/{root_name}_cmb_derivs_cmb_fiducial.txt',ells)
-    dcls = load_derivs(f'{data_dir}{root_name}_cmb_derivs',param_list,ells)
-    if errs is None:
-        nl_dict = {'kk':interp(ells,nls,bounds_error=True)}
-        F = band_fisher(param_list,bin_edges,['kk'],cls,nl_dict,dcls,interpolate=interpolate)  * fsky
-    else:
-        assert fsky is None
-        F = band_fisher(param_list,bin_edges,['kk'],None,None,dcls,interpolate=interpolate,errs=errs)
-    return F
-
-def get_lensing_sn(bin_edges,ells,nls,fsky,interpolate=False,root_name='v20201120'):
-    cents,bin = get_binner(bin_edges,interpolate)
-    nls_dict = {'kk':interp(ells,nls,bounds_error=True)}
-    cls = load_theory_dict(f'{data_dir}{root_name}_cmb_derivs/{root_name}_cmb_derivs_cmb_fiducial.txt',ells)
-    cov = gaussian_band_covariance(bin_edges,['kk'],cls,nls_dict,interpolate=interpolate) / fsky
-    cinv = np.linalg.inv(cov)
-    clkk = bin(cls['kk'])[...,None]
-    return np.sqrt(np.einsum('ik,ik->',np.einsum('ij,ijk->ik',clkk,cinv),clkk))
     
-
 def check_fisher_sanity(fmat,param_list):
     Ny,Nx = fmat.shape
     assert Ny==Nx
     assert Ny==len(param_list)
     assert len(param_list)==len(set(param_list))
 
-def write_fisher(filename,fmat,delim=','):
-    np.savetxt(filename,fmat,header=(delim).join(fmat.params),delimiter=delim)
-
-def read_fisher(csv_file,delim=','):
-    fmat = np.loadtxt(csv_file,delimiter=delim)
-    with open(csv_file) as f:
-        fline = f.readline()
-    fline = fline.replace("#","")
-    columns = fline.strip().split(delim)
-    assert len(set(columns)) == len(columns)
-    return FisherMatrix(fmat = fmat,param_list = columns)
-
-def rename_fisher(fmat,pmapping):
-    old_params = fmat.params
-    new_params = list(old_params)
-    for key in pmapping.keys():
-        if key not in old_params: continue
-        i = old_params.index(key)
-        new_params[i] = pmapping[key]
-    return FisherMatrix(fmat=fmat.values,param_list=new_params)
     
 class FisherMatrix(DataFrame):
     """
@@ -384,50 +251,34 @@ class FisherMatrix(DataFrame):
         chi212 = finv[i,j]
         return np.array([[chi211,chi212],[chi212,chi222]])
 
+def write_fisher(filename,fmat,delim=','):
+    np.savetxt(filename,fmat,header=(delim).join(fmat.params),delimiter=delim)
 
-def get_planck_cmb_fisher(param_list,bin_edges,specs,root_name,fsky,interpolate=True):
-    ells = np.arange(0,bin_edges.max()+1)
-    nls = get_planck_nls(ells)
-    cls = load_theory_dict(f'{root_name}/{os.path.basename(root_name)}_cmb_fiducial.txt',ells)
-    dcls = load_derivs(root_name,param_list,ells)
-    return band_fisher(param_list,bin_edges,specs,cls,nls,dcls,interpolate=interpolate)  * fsky
+def read_fisher(csv_file,delim=','):
+    fmat = np.loadtxt(csv_file,delimiter=delim)
+    with open(csv_file) as f:
+        fline = f.readline()
+    fline = fline.replace("#","")
+    columns = fline.strip().split(delim)
+    assert len(set(columns)) == len(columns)
+    return FisherMatrix(fmat = fmat,param_list = columns)
 
+def rename_fisher(fmat,pmapping):
+    old_params = fmat.params
+    new_params = list(old_params)
+    for key in pmapping.keys():
+        if key not in old_params: continue
+        i = old_params.index(key)
+        new_params[i] = pmapping[key]
+    return FisherMatrix(fmat=fmat.values,param_list=new_params)
 
-def load_derivs(root_name,param_list,ells):
-    dcls = {}
-    for param in param_list:
-        dcls[param] = load_theory_dict(f'{root_name}/{os.path.basename(root_name)}_cmb_{param}_deriv.txt',ells)
-    return dcls
-
-
-def load_theory_dict(fname,ells):
-    cls = {}
-    ells,tt,ee,bb,te,kk = np.loadtxt(fname,unpack=True)
-    cls['TT'] = interp(ells,tt)
-    cls['EE'] = interp(ells,ee)
-    cls['BB'] = interp(ells,bb)
-    cls['TE'] = interp(ells,te)
-    cls['kk'] = interp(ells,kk)
-    return cls
-
-
-def get_planck_nls(ells):
-    beams_T =  [33.,23.,14.,10.,7.,5.,5.]
-    uK_arcmins_T = [145.,149.,137.,65.,43.,66.,200.]
-    beams_P =  [14.,10.,7.,5.,5.]
-    uK_arcmins_P = [450.,103.,81.,134.,406.]
-    Ns_TT = np.asarray([(uK_arcmin*np.pi/180./60.)**2./gauss_beam(ells,fwhm)**2. for uK_arcmin,fwhm in zip(uK_arcmins_T,beams_T)])
-    Ns_PP = np.asarray([(uK_arcmin*np.pi/180./60.)**2./gauss_beam(ells,fwhm)**2. for uK_arcmin,fwhm in zip(uK_arcmins_P,beams_P)])
-    N_TT = 1./(1./Ns_TT).sum(axis=0)
-    N_PP = 1./(1./Ns_PP).sum(axis=0)
-    nls = {}
-    nls['TT'] = interp(ells,N_TT)
-    nls['EE'] = interp(ells,N_PP)
-    nls['BB'] = interp(ells,N_PP)
-    return nls
-
-
+"""
+Power spectrum bandpower tools
+==============================
+"""
+    
 def gaussian_band_covariance(bin_edges,specs,cls_dict,nls_dict,interpolate=False):
+    # Dictionary of functions
 
     cents,bin = get_binner(bin_edges,interpolate)
     delta_ell = np.diff(bin_edges)
@@ -471,6 +322,7 @@ def gaussian_band_covariance(bin_edges,specs,cls_dict,nls_dict,interpolate=False
             if i!=j: cov[:,j,i] = cov[:,i,j].copy()
     return cov
 
+    
 
 def band_fisher(param_list,bin_edges,specs,cls_dict,nls_dict,derivs_dict,interpolate=True,errs=None,cov=None):
 
@@ -504,7 +356,209 @@ def band_fisher(param_list,bin_edges,specs,cls_dict,nls_dict,derivs_dict,interpo
 
     return FisherMatrix(Fisher,param_list)
 
+    
 
+"""
+Experiment specific stuff
+=========================
+"""
+
+def get_planck_nls(ells):
+    beams_T =  [33.,23.,14.,10.,7.,5.,5.]
+    uK_arcmins_T = [145.,149.,137.,65.,43.,66.,200.]
+    beams_P =  [14.,10.,7.,5.,5.]
+    uK_arcmins_P = [450.,103.,81.,134.,406.]
+    Ns_TT = np.asarray([(uK_arcmin*np.pi/180./60.)**2./gauss_beam(ells,fwhm)**2. for uK_arcmin,fwhm in zip(uK_arcmins_T,beams_T)])
+    Ns_PP = np.asarray([(uK_arcmin*np.pi/180./60.)**2./gauss_beam(ells,fwhm)**2. for uK_arcmin,fwhm in zip(uK_arcmins_P,beams_P)])
+    N_TT = 1./(1./Ns_TT).sum(axis=0)
+    N_PP = 1./(1./Ns_PP).sum(axis=0)
+    nls = {}
+    nls['TT'] = interp(ells,N_TT)
+    nls['EE'] = interp(ells,N_PP)
+    nls['BB'] = interp(ells,N_PP)
+    return nls
+
+
+def get_lensing_nl(exp):
+    exp = exp.strip().lower()
+    froot = os.path.dirname(__file__)+"/data/lensing_nl/"
+    if exp=='planck':
+        return np.loadtxt(f'{froot}planck_2018_mv_nlkk.dat',usecols=[0,1],unpack=True)
+    elif exp=='planck_pr4':
+        ls,cpp = np.loadtxt(f'{froot}planck_2022_npipe_mv_N0.dat',usecols=[0,1],unpack=True)
+        ckk = cpp * 2. * np.pi / 4. * 1e-7
+        return ls,ckk
+    elif exp=='act_dr6':
+        return np.loadtxt(f'{froot}act_dr6.txt',usecols=[0,1],unpack=True)
+    elif exp=='so_goal':
+        return np.loadtxt(f'{froot}so_v3_1_deproj0_goal_fsky0p4_it.dat',usecols=[0,7],unpack=True)
+    elif exp=='s4':
+        return np.loadtxt(f'{froot}s4_noise.dat',usecols=[0,7],unpack=True)
+
+def get_so_ilc_fnoise(exp,deproj='deproj0',mode='baseline'):
+    fnoise = {}
+    import so_models_v3
+    froot = os.path.dirname(so_models_v3.__file__)+"/../LAT_comp_sep_noise/"
+    exp = exp.lower()
+    if exp=='so': exp = "so_v3.1.0"
+    if exp=='so_v3.1.0':
+        col = int(deproj[-1])
+        for pol in ['TT','EE','BB']:
+            if pol=='TT':
+                ells,nl = np.loadtxt(f'{froot}v3.1.0/SO_LAT_Nell_T_atmv1_{mode}_fsky0p4_ILC_CMB.txt',unpack=True,usecols=[0,col+1])                
+            else:
+                ells,nl = np.loadtxt(f'{froot}v3.1.0/SO_LAT_Nell_P_{mode}_fsky0p4_ILC_CMB_{pol[0]}.txt',unpack=True,usecols=[0,col+1])
+            fnoise[pol] = interp(ells,nl,fill_value=np.inf)        
+    elif exp=='aso':
+        sens = {'threshold':'SENS0','baseline':'SENS1','goal':'SENS2'}[mode]
+        ells,nl = np.loadtxt(f'{froot}aso/SOV3_T_default1-4-2_noisecurves_{deproj}_{sens}_mask_16000_ell_TT_yy_39GHzfix_ext15yrs.txt',unpack=True,usecols=[0,1])
+        fnoise['TT'] = interp(ells,nl,fill_value=np.inf) 
+        ells,nlee,nlbb = np.loadtxt(f'{froot}aso/SOV3_pol_default1-4-2_noisecurves_{deproj}_{sens}_mask_16000_ell_EE_BB_ext15yrs.txt',unpack=True,usecols=[0,1,2])
+        fnoise['EE'] = interp(ells,nlee,fill_value=np.inf) 
+        fnoise['BB'] = interp(ells,nlbb,fill_value=np.inf) 
+    else:
+        raise ValueError
+    return fnoise
+
+
+"""
+Generic utilities
+=================
+"""
+
+
+def bin1d(bin_edges,ix,iy,stat=np.nanmean):
+    numbins = len(bin_edges)-1
+    cents = (bin_edges[:-1]+bin_edges[1:])/2.
+    bin_edges_min = bin_edges.min()
+    bin_edges_max = bin_edges.max()
+    x = ix.copy()
+    y = iy.copy()
+    # this just prevents an annoying warning (which is otherwise informative) everytime
+    # all the values outside the bin_edges are nans
+    y[x<bin_edges_min] = 0
+    y[x>bin_edges_max] = 0
+    # pretty sure this treats nans in y correctly, but should double-check!
+    bin_means = binnedstat(x,y,bins=bin_edges,statistic=stat)[0]
+    return cents,bin_means
+
+
+def mkdir(dirpath,comm=None):
+    if comm is None:
+        from . import mpi
+        comm = mpi.MPI.COMM_WORLD
+    exists = os.path.exists(dirpath)
+    comm.Barrier()
+    if comm.Get_rank()==0: 
+        if not (exists):
+            os.makedirs(dirpath)
+    return exists
+
+def interp(x,y,bounds_error=False,fill_value=0.,**kwargs):
+    return interp1d(x,y,bounds_error=bounds_error,fill_value=fill_value,**kwargs)
+
+def gauss_beam(ell,fwhm):
+    """
+    Map-level beam transfer function B(ell) for FWHM in arcminutes.
+    """
+    tht_fwhm = np.deg2rad(fwhm / 60.)
+    return np.exp(-(tht_fwhm**2.)*(ell**2.) / (16.*np.log(2.)))
+
+
+def prepare_output(args, message="",allow_changes=False):
+    output_path = args.output
+    assert output_path.strip()[-1]!='/'
+    mkdir(f'{output_path}')
+    rname = os.path.basename(f'{output_path}')
+    with open(f'{output_path}/info.log','w') as f:
+        f.write(f'{message}\n')
+        now = datetime.datetime.now()
+        f.write(f'Current date and time : {now.strftime("%Y-%m-%d %H:%M:%S")}\n')
+        for arg in vars(args):
+            f.write(f'{arg} :  {getattr(args, arg)}\n')
+        info = get_info(path=os.path.realpath(__file__))
+        if not(allow_changes): assert not(info['changes']), "Git must not have changes to run this script."
+        f.write(pretty_info(info))
+    output_root = f'{output_path}/{rname}'
+    return output_root
+
+
+
+"""
+I/O specific to this package
+============================
+"""
+
+
+def get_fiducials(root_name='v20201120'):
+    param_file = f'{data_dir}{root_name}_cmb_derivs/params.txt'
+    _,fids = get_param_info(param_file,exclude=None)
+    return fids
+
+
+def get_saved_fisher(name,fsky=None,root_name='v20201120'):
+    if name=='planck_lowell':
+        fsky = 1 if fsky is None else fsky
+        return fsky * read_fisher(f'{data_dir}{root_name}_saved_cmb/{root_name}_saved_cmb_planck_low_ell_TT_fullsky.txt',delim=',')
+    elif name=='planck_highell':
+        fsky = 1 if fsky is None else fsky
+        return fsky * read_fisher(f'{data_dir}{root_name}_saved_cmb/{root_name}_saved_cmb_planck_high_ell_TTEETE_fullsky.txt',delim=',')
+    elif name=='desi_bao':
+        assert fsky is None
+        return read_fisher(f'{data_dir}{root_name}_{name}/{root_name}_{name}_bao_fisher.txt',delim=',')
+    elif name=='boss_bao':
+        assert fsky is None
+        return read_fisher(f'{data_dir}{root_name}_{name}/{root_name}_{name}_bao_fisher.txt',delim=',')
+
+def get_lensing_fisher(bin_edges,ells,nls,fsky,root_name='v20201120',interpolate=True,errs=None):
+    param_file = f'{data_dir}{root_name}_cmb_derivs/params.txt'
+    _,fids = get_param_info(param_file,exclude=None)
+    param_list = list(fids.keys())
+    cls = load_theory_dict(f'{data_dir}{root_name}_cmb_derivs/{root_name}_cmb_derivs_cmb_fiducial.txt',ells)
+    dcls = load_derivs(f'{data_dir}{root_name}_cmb_derivs',param_list,ells)
+    if errs is None:
+        nl_dict = {'kk':interp(ells,nls,bounds_error=True)}
+        F = band_fisher(param_list,bin_edges,['kk'],cls,nl_dict,dcls,interpolate=interpolate)  * fsky
+    else:
+        assert fsky is None
+        F = band_fisher(param_list,bin_edges,['kk'],None,None,dcls,interpolate=interpolate,errs=errs)
+    return F
+
+def get_lensing_sn(bin_edges,ells,nls,fsky,interpolate=False,root_name='v20201120'):
+    cents,bin = get_binner(bin_edges,interpolate)
+    nls_dict = {'kk':interp(ells,nls,bounds_error=True)}
+    cls = load_theory_dict(f'{data_dir}{root_name}_cmb_derivs/{root_name}_cmb_derivs_cmb_fiducial.txt',ells)
+    cov = gaussian_band_covariance(bin_edges,['kk'],cls,nls_dict,interpolate=interpolate) / fsky
+    cinv = np.linalg.inv(cov)
+    clkk = bin(cls['kk'])[...,None]
+    return np.sqrt(np.einsum('ik,ik->',np.einsum('ij,ijk->ik',clkk,cinv),clkk))
+    
+
+
+def get_planck_cmb_fisher(param_list,bin_edges,specs,root_name,fsky,interpolate=True):
+    ells = np.arange(0,bin_edges.max()+1)
+    nls = get_planck_nls(ells)
+    cls = load_theory_dict(f'{root_name}/{os.path.basename(root_name)}_cmb_fiducial.txt',ells)
+    dcls = load_derivs(root_name,param_list,ells)
+    return band_fisher(param_list,bin_edges,specs,cls,nls,dcls,interpolate=interpolate)  * fsky
+
+
+def load_derivs(root_name,param_list,ells):
+    dcls = {}
+    for param in param_list:
+        dcls[param] = load_theory_dict(f'{root_name}/{os.path.basename(root_name)}_cmb_{param}_deriv.txt',ells)
+    return dcls
+
+
+def load_theory_dict(fname,ells):
+    cls = {}
+    ells,tt,ee,bb,te,kk = np.loadtxt(fname,unpack=True)
+    cls['TT'] = interp(ells,tt)
+    cls['EE'] = interp(ells,ee)
+    cls['BB'] = interp(ells,bb)
+    cls['TE'] = interp(ells,te)
+    cls['kk'] = interp(ells,kk)
+    return cls
 
 
 def get_param_info(param_file,exclude=None,get_range=False):
@@ -532,6 +586,12 @@ def get_param_info(param_file,exclude=None,get_range=False):
             jobs.append((param,fid+step,'u'))
             jobs.append((param,fid-step,'d'))
     return jobs,fids
+
+"""
+Boltzmann helpers
+=================
+"""
+
 
 def _camb_to_class(params):
     if params['thetastar'] is not None:
@@ -855,6 +915,8 @@ def reparameterize(Fmat,oparams,fiducials,deriv_root='v20201120_s8_derivs',verbo
     oparams can contain those as well as
     s8
     om
+
+    This has not been tested!
     """
     iparams = Fmat.params
     onum = len(oparams)
