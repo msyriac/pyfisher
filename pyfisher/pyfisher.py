@@ -515,6 +515,11 @@ def get_saved_fisher(name,fsky=None,root_name='v20201120'):
     elif name=='boss_bao':
         assert fsky is None
         return read_fisher(f'{data_dir}{root_name}_{name}/{root_name}_{name}_bao_fisher.txt',delim=',')
+    elif name=='boss_bao_lss':
+        assert fsky is None
+        return read_fisher(f'{data_dir}lss_bao_boss_v20240604/lss_bao_boss_v20240604_bao_fisher.txt',delim=',')
+    else:
+        raise ValueError
 
 def get_lensing_fisher(bin_edges,ells,nls,fsky,root_name='v20201120',interpolate=True,errs=None):
     param_file = f'{data_dir}{root_name}_cmb_derivs/params.txt'

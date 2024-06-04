@@ -1,0 +1,18 @@
+save_bao.py BAO Fisher Matrix run
+Current date and time : 2024-06-04 19:02:37
+exp_name :  boss
+boss_include :  6df,mgs,lowz,cmass
+input_path :  input
+exclude :  As,ns,tau,r,S8,sigma8
+output :  lss_bao_boss_v20240604
+param_file :  input/param_file_lss.txt
+
+/home/msyriac/repos/pyfisher/pyfisher
+=====================================
+	path      /home/msyriac/repos/pyfisher/pyfisher   
+	version   None                                    
+	is_git    True                                    
+	hash      778856eb5753dce63d9893760a45babc81a5e406
+	untracked True                                    
+	changes   False                                   
+	branch    master                                  
