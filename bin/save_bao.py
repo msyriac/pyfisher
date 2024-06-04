@@ -37,7 +37,7 @@ for task in my_tasks:
     else:
         pparams[param] = val
 
-    hmvec.Cosmology(pparams,engine='class')
+    hm = hmvec.Cosmology(pparams,engine='class')
     retval = hm.get_bao_rs_dV(zs)
 
     if param is None:
