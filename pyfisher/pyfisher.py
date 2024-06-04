@@ -27,7 +27,9 @@ latex_mapping = {
     'thetastar': '$\\theta^*$',
     'ctheta': '$\\theta_{\\rm COSMOMC}$',
     's8': '$\\sigma_8$',
+    'S8': '$S_8$',
     'om': '$\\Omega_m$',
+    'omm': '$\\Omega_m$',
     's8om0.25': '$\\sigma_8 \\Omega_m^{0.25}$',
 }
 
@@ -62,15 +64,18 @@ def get_deriv(func,param,fiducials,step_frac=0.1,dtype='five-point'):
 
 
 def contour_plot(fisher,fiducials,fname,name='',add_marker=False,latex=True):
-    from chainconsumer import ChainConsumer
+    from chainconsumer import ChainConsumer, Chain
     mean = [fiducials[key] for key in fisher.params]
     cov = np.linalg.inv(fisher.values)
     parameters = [latex_mapping[x] for x in fisher.params] if latex else fisher.params
 
     c = ChainConsumer()
-    c.add_covariance(mean, cov, parameters=parameters, name=name,shade=False)
+    #c.add_covariance(mean, cov, parameters=parameters, name=name,shade=False)
+    
+    ch = Chain.from_covariance(mean, cov, columns=parameters, name=name)#,shade=False)
+    c.add_chain(ch)
     if add_marker: c.add_marker(mean, parameters=parameters, marker_style="*", marker_size=100, color="r",name='')
-    c.configure(usetex=False, serif=False,sigma2d=True,sigmas=[1])
+    #c.configure(usetex=False, serif=False,sigma2d=True,sigmas=[1])
     fig = c.plotter.plot()
     fig.set_size_inches(3 + fig.get_size_inches()) 
     fig.savefig(fname)
@@ -211,7 +216,7 @@ class FisherMatrix(DataFrame):
         Adds 1-sigma value 'prior' to the parameter name specified by 'param'
         """
         try:
-            self[param][param] += 1./prior**2.
+            self.loc[param][param] = self.loc[param][param] + 1./prior**2.
         except KeyError:
             if warn: print(f"WARNING: skipping prior for {param} since it was not found")
         

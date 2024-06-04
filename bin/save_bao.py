@@ -3,6 +3,7 @@ import numpy as np
 import os,sys,shutil
 import pyfisher
 from pyfisher import mpi
+import hmvec
 
 import argparse
 # Parse command line
@@ -10,7 +11,7 @@ parser = argparse.ArgumentParser(description='Do a thing.')
 parser.add_argument("exp_name", type=str,help='Positional arg.')
 parser.add_argument("--boss-include",     type=str,  default='6df,mgs,lowz,cmass',help="A description.")
 parser.add_argument("--input-path",     type=str,  default='input',help="Relative path to directory with experiment info.")
-parser.add_argument("--exclude",     type=str,  default='As,ns,tau,r',help="Relative path to directory with experiment info.")
+parser.add_argument("--exclude",     type=str,  default='As,ns,tau,r,S8,sigma8',help="Relative path to directory with experiment info.")
 required_args = parser.add_argument_group('Required arguments')
 required_args.add_argument("-o","--output",type=str,help="Output root",required=True)
 required_args.add_argument("-p","--param-file",type=str,help="Parameter file",required=True)
@@ -36,7 +37,8 @@ for task in my_tasks:
     else:
         pparams[param] = val
 
-    retval = pyfisher.get_bao_rs_dV(zs,params=pparams,engine='camb',de='ppf')
+    hmvec.Cosmology(pparams,engine='class')
+    retval = hm.get_bao_rs_dV(zs)
 
     if param is None:
         fname = f'{output_root}_bao_fiducial.txt'
