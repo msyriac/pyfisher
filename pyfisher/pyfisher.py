@@ -27,6 +27,7 @@ latex_mapping = {
     'thetastar': '$\\theta^*$',
     'ctheta': '$\\theta_{\\rm COSMOMC}$',
     's8': '$\\sigma_8$',
+    'sigma8': '$\\sigma_8$',
     'S8': '$S_8$',
     'om': '$\\Omega_m$',
     'omm': '$\\Omega_m$',
@@ -230,6 +231,28 @@ class FisherMatrix(DataFrame):
         errs = err2**(0.5)
         return dict(zip(self.params,errs))
     
+    def marginalize(self,out_params=None,marg_params=None,return_fisher=True):
+        """
+        Returns a marginalized Fisher or covariance matrix, i.e. drops certain parameters
+        after inverting.
+        """
+        spec_count = sum([a is None for a in [out_params,marg_params]])
+        if spec_count==0: raise ValueError("Either specify out_params, the parameters you want in the final covariance matrix, or specify marg_params, the parameters you want to marginalize over.")
+        if spec_count==2: raise ValueError("Only specify one of out_params, the parameters you want in the final covariance matrix, or marg_params, the parameters you want to marginalize over.")
+        if not(out_params is None):
+            marge_params = []
+            for p in self.params:
+                if p in out_params: continue
+                marge_params.append(p)
+        finv = FisherMatrix(np.linalg.inv(self.values),self.params)
+        finv.drop(labels=marge_params,axis=0,inplace=True)
+        finv.drop(labels=marge_params,axis=1,inplace=True)
+        finv.params = finv.columns.tolist()
+        assert set(finv.index.tolist())==set(finv.params)
+        if return_fisher:
+            finv = FisherMatrix(np.linalg.inv(finv.values),finv.params)
+        return finv
+        
     def delete(self,params):
         """
         Given a list of parameter names 'params', deletes these from the Fisher matrix.
