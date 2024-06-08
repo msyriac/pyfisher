@@ -541,6 +541,8 @@ def get_saved_fisher(name,fsky=None,root_name='v20201120'):
     elif name=='boss_bao_lss':
         assert fsky is None
         return read_fisher(f'{data_dir}lss_bao_boss_v20240604/lss_bao_boss_v20240604_bao_fisher.txt',delim=',')
+    elif name=='desi_bao_lss':
+        return read_fisher(f'{data_dir}lss_bao_desi_v20240608/lss_bao_desi_v20240608_fisher.txt',delim=',')
     else:
         raise ValueError
 
