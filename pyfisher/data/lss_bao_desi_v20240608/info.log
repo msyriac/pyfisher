@@ -1,0 +1,18 @@
+save_bao.py BAO Fisher Matrix run
+Current date and time : 2024-06-08 18:43:02
+exp_name :  desi
+boss_include :  6df,mgs,lowz,cmass
+input_path :  input
+exclude :  As,ns,tau,r,S8,sigma8
+output :  lss_bao_desi_v20240608
+param_file :  input/param_file_lss.txt
+
+/home/msyriac/repos/pyfisher/pyfisher
+=====================================
+	path      /home/msyriac/repos/pyfisher/pyfisher   
+	version   None                                    
+	is_git    True                                    
+	hash      54750142061ca115acefbb8c155e55b44b9477c0
+	untracked True                                    
+	changes   False                                   
+	branch    master                                  
